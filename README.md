@@ -1,2 +1,2 @@
 # judithhubbard.github.io
-Judith Hubbard 
+Judith Hubbard for Tompkins County Legislature
