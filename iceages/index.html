@@ -1,0 +1,914 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>html,body{margin:0}</style>
+<title>Orbital cycles and ice ages</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: instrument panel — explorer (controls + orbit + sunlight map) above a stacked time record sharing one time axis.
+   Deliberately single light theme: black on white for classroom projection and printing. */
+:root {
+  --bg: #ffffff;
+  --ink: #111417;
+  --muted: #5b6168;
+  --rule: #d9dde1;
+  --panel: #f5f7f8;
+  --accent: #1f5a99;     /* data lines, selected time */
+  --warm: #b4471d;       /* sun, perihelion */
+  --font-ui: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-num: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme: light;
+}
+body { background: var(--bg); color: var(--ink); font-family: var(--font-ui); font-size: 15px; line-height: 1.45; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-block: 20px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+h1 { font-size: 26px; font-weight: 600; margin: 0 0 4px; text-wrap: balance; }
+h2 { font-size: 18px; font-weight: 600; margin: 0 0 10px; text-wrap: balance; }
+p.lede { color: var(--muted); margin: 0 0 22px; max-width: 70ch; }
+section { border-top: 2px solid var(--ink); padding-top: 14px; margin-top: 26px; }
+.grid { display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 28px; align-items: start; }
+.grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px; margin-top: 22px; }
+@media (max-width: 760px) { .grid, .grid2 { grid-template-columns: minmax(0, 1fr); } }
+.cbox { position: relative; width: 100%; overflow: hidden; }
+.cbox canvas { position: absolute; left: 0; top: 0; }
+h3 { font-size: 14.5px; font-weight: 600; margin: 0 0 6px; }
+.controls { display: grid; gap: 14px; }
+.ctl label { display: flex; justify-content: space-between; gap: 8px; font-weight: 500; font-size: 14px; }
+.ctl .val { font-family: var(--font-num); font-variant-numeric: tabular-nums; }
+.ctl .hint { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+input[type=range] { width: 100%; accent-color: var(--accent); }
+.btns { display: flex; flex-wrap: wrap; gap: 8px; }
+select { font: inherit; font-size: 13.5px; padding: 4px 6px; border: 1px solid var(--ink); border-radius: 3px; background: var(--bg); color: var(--ink); }
+button { font: inherit; font-size: 13.5px; padding: 6px 12px; border: 1px solid var(--ink); background: var(--bg); color: var(--ink); border-radius: 3px; cursor: pointer; }
+button:hover { background: var(--panel); }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.check { font-size: 13.5px; display: flex; gap: 6px; align-items: center; }
+.fig { min-width: 0; }
+.fig .cap { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+canvas { display: block; }
+.readout { display: grid; grid-template-columns: auto auto; gap: 3px 14px; font-size: 13.5px; background: var(--panel); padding: 10px 12px; border-radius: 3px; }
+.readout dt { color: var(--muted); }
+.readout dd { margin: 0; font-family: var(--font-num); font-variant-numeric: tabular-nums; text-align: right; }
+.timebar { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; margin-bottom: 8px; font-size: 14px; }
+.timebar .now { font-family: var(--font-num); font-size: 15px; }
+.player { position: sticky; top: 0; z-index: 10; background: var(--bg); border-bottom: 1px solid var(--rule); padding: 8px 0 10px; margin-bottom: 4px;
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px 16px; align-items: center; font-size: 13.5px; }
+.player .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.player .now { font-family: var(--font-num); font-size: 14px; min-width: 22ch; }
+.xyctl { flex-wrap: nowrap; font-size: 13.5px; gap: 10px 14px; }
+.xyctl select { max-width: 170px; }
+#lagV { flex: 1 1 260px; min-width: 220px; white-space: normal; line-height: 1.35; }
+.xyctl label { white-space: nowrap; }
+@media (max-width: 1000px) { .xyctl { flex-wrap: wrap; } }
+.xywrap { display: grid; grid-template-columns: minmax(0, 620px) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 760px) { .xywrap { grid-template-columns: minmax(0, 1fr); } }
+.xystats { font-size: 13.5px; display: grid; gap: 6px; }
+.xystats .big { font-family: var(--font-num); font-size: 18px; }
+.xystats .muted { color: var(--muted); font-size: 12.5px; }
+.cmplegend { display: grid; grid-template-columns: max-content max-content max-content; gap: 4px 14px; align-items: center; margin: 0 0 10px; font-size: 13.5px; }
+.cmplegend .nm { display: inline-flex; align-items: center; gap: 8px; }
+.cmplegend .sw { width: 24px; height: 0; border-top: 2.5px solid; flex: none; }
+.cmplegend .dir { color: var(--muted); font-weight: 400; }
+.cmplegend button { padding: 1px 9px; font-size: 12.5px; }
+.cmplegend .empty { grid-column: 1 / -1; color: var(--muted); }
+#trackBtns .star { font-size: 12.5px; padding: 0 8px; line-height: 20px; }
+#trackBtns .star[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+#trackBtns { position: absolute; inset: 0; pointer-events: none; z-index: 2; }
+#trackBtns .tb { position: absolute; right: 12px; display: flex; gap: 3px; pointer-events: auto; }
+#trackBtns button { padding: 0 7px; font-size: 12px; line-height: 18px; }
+#trackBtns .grip { z-index: 0; position: absolute; left: 0; width: 52px; height: 16px; pointer-events: auto; cursor: grab; touch-action: none;
+  display: flex; align-items: center; justify-content: flex-end; padding-right: 6px; box-sizing: border-box; color: #3b4148; font-size: 16px; line-height: 1; user-select: none; }
+#trackBtns .grip::before { content: ""; position: absolute; right: 2px; top: 0; width: 22px; height: 16px; border: 1px solid var(--rule); border-radius: 4px; background: var(--panel); z-index: -1; }
+#trackBtns .grip:hover { color: var(--ink); }
+#trackBtns .grip:hover::before { border-color: var(--ink); }
+#trackBtns .grip.dragging { cursor: grabbing; color: var(--ink); }
+#trackBtns .drop { position: absolute; left: 0; right: 0; height: 3px; background: var(--ink); border-radius: 2px; display: none; }
+.player .sep { width: 1px; align-self: stretch; background: var(--rule); margin: 0 4px; }
+.player .ends { display: flex; justify-content: space-between; color: var(--muted); font-size: 11.5px; }
+.player button { padding: 4px 10px; }
+@media (max-width: 640px) { .player { grid-template-columns: minmax(0, 1fr); } }
+.sources { font-size: 12.5px; color: var(--muted); margin-top: 28px; border-top: 1px solid var(--rule); padding-top: 12px; }
+.sources p { margin: 0 0 4px; }
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } }
+</style>
+
+<div class="wrap">
+  <h1 style="margin-bottom:14px">Orbital cycles and ice ages</h1>
+
+  <div class="player" role="region" aria-label="Time controls">
+    <div class="row">
+      <button id="btnPlay" type="button">Play</button>
+      <button id="btnBack" type="button" title="1,000 years earlier">◀ 1 kyr</button>
+      <button id="btnFwd" type="button" title="1,000 years later">1 kyr ▶</button>
+      <label>Speed <select id="speed"><option value="1">1,000 yr/s</option><option value="2">2,000 yr/s</option><option value="5" selected>5,000 yr/s</option><option value="10">10,000 yr/s</option><option value="40">40,000 yr/s</option></select></label>
+      <span class="sep"></span>
+      <span id="tNow" hidden></span>
+      <label title="Years from today: + for the future, − for the past. Type a number and press Enter.">Date: <input id="tYears" type="number" step="1000" min="-3000000" max="100000" value="0" style="width:8.5em;font:inherit;font-family:var(--font-num);padding:3px 6px;border:1px solid var(--ink);border-radius:3px"> years from today</label>
+      <span class="sep"></span>
+      <span>Window:</span>
+      <button class="zIn" type="button" title="Zoom in">+</button>
+      <button class="zOut" type="button" title="Zoom out">−</button>
+      <button class="zAll" type="button">Show all</button>
+      <span class="now" id="zLab" style="min-width:0"></span>
+    </div>
+    <div class="cbox" style="height:58px"><canvas id="overview" aria-label="Whole record: click to choose a date; the gray box is the time window shown on the charts" style="touch-action:none"></canvas></div>
+    <div class="ends" style="padding-left:58px">▼ = date (click or drag). Gray box = time window for the charts (drag to move, drag its edges to resize).</div>
+  </div>
+
+  <section>
+    <h2>1. Orbital cycles and energy</h2>
+    <div class="grid">
+      <div class="controls">
+        <div class="ctl">
+          <label for="ecc">Eccentricity (orbit shape) <span class="val" id="eccV"></span></label>
+          <input id="ecc" type="range" min="0" max="0.06" step="0.0005">
+          <div class="hint">0 = circle. Past range 0–0.058.</div>
+        </div>
+        <div class="ctl">
+          <label for="obl">Obliquity (tilt) <span class="val" id="oblV"></span></label>
+          <input id="obl" type="range" min="22" max="24.6" step="0.01">
+          <div class="hint">Past range 22.1°–24.5°.</div>
+        </div>
+        <div class="ctl">
+          <label for="per">Precession: closest to the Sun on <span class="val" id="perV"></span></label>
+          <input id="per" type="range" min="0" max="365" step="1">
+          <div class="hint">Today: early January.</div>
+        </div>
+        <div class="btns">
+          <button id="btnToday" type="button">Set to today</button>
+          <button id="btnSel" type="button">Set to the date in the top bar</button>
+        </div>
+        <label class="check"><input id="exag" type="checkbox" checked> Exaggerate orbit shape ×8 in the diagram</label>
+        <dl class="readout" id="readout"></dl>
+      </div>
+      <div class="fig">
+        <h3>Earth’s orbit, seen from above the North Pole</h3>
+        <div class="cbox" style="height:400px"><canvas id="orbit" aria-label="Diagram of Earth's orbit"></canvas></div>
+        <div class="cap">Shaded halves: northern spring + summer and fall + winter. The larger area takes longer (Kepler’s second law).</div>
+        <div class="cbox" style="height:74px;margin-top:12px"><canvas id="seasons" aria-label="Length of each northern season in days"></canvas></div>
+        <div class="cap">Northern-hemisphere season lengths.</div>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="fig">
+        <h3>Sunlight at 65°N through the year (W/m²)</h3>
+        <div class="cbox" style="height:300px"><canvas id="line65" aria-label="Sunlight at 65 degrees north through the year"></canvas></div>
+        <div class="cap">Daily average at the top of the atmosphere. Dashed lines: solstices and equinoxes (March equinox fixed at March 20).</div>
+      </div>
+      <div class="fig">
+        <h3>Sunlight at every latitude through the year (W/m²)</h3>
+        <div id="heatTot" style="font-size:13px;margin:0 0 6px"></div>
+        <div class="cbox" style="height:300px"><canvas id="heat" aria-label="Daily sunlight by latitude and month"></canvas></div>
+        <div class="cap">Thin lines every 100 W/m²; white line: 65°N.</div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>2. Records from 3 Ma to 100 kyrs in the future</h2>
+    <p style="margin:0 0 6px;font-size:13px;color:var(--muted)">Drag ⠿ to move a chart. Click ☆ on a chart to add it to the comparison in Part 3.</p>
+    <div class="cbox" style="height:900px"><div id="trackBtns"></div><canvas id="time" aria-label="Orbital parameters, summer sunlight at 65 degrees north, and ice volume over the last 3 million years"></canvas></div>
+  </section>
+
+  <section>
+    <h2>3. Compare records</h2>
+    <p style="margin:0 0 8px;font-size:13px;color:var(--muted)">Records starred (★) in Part 2. Each line is rescaled to its own average (0) and spread over the time window, to compare timing rather than size.</p>
+    <div id="cmpLegend" class="cmplegend"></div>
+    <div class="cbox" style="height:320px"><canvas id="cmp" aria-label="Comparison of the starred records, each rescaled" style="touch-action:pan-y"></canvas></div>
+  </section>
+
+  <section>
+    <h2>4. Plot one record against another</h2>
+    <div class="timebar xyctl">
+      <label>X: <select id="sx"></select></label>
+      <label>Y: <select id="sy"></select></label>
+      <label title="Positive: each X value is paired with the Y value from that many thousand years later (Y responds after X).">Time shift: <input id="lag" type="range" min="-15" max="15" step="1" value="0" style="width:110px;vertical-align:middle"></label> <span id="lagV"></span>
+    </div>
+    <div class="xywrap">
+      <div class="cbox" style="height:440px;max-width:620px"><canvas id="xy" aria-label="Scatter plot of one record against another"></canvas></div>
+      <div><div class="xystats" id="xyStats"></div><div style="font-size:13px;margin-top:6px">Flip in the timeline: <label class="check" style="display:inline-flex"><input id="flipX" type="checkbox"> <span id="flipXn">X</span></label> &nbsp; <label class="check" style="display:inline-flex"><input id="flipY" type="checkbox"> <span id="flipYn">Y</span></label></div><div class="cbox" style="height:330px;margin-top:4px"><canvas id="xyt" aria-label="The two records through time, with Y shifted by the time shift"></canvas></div></div>
+    </div>
+  </section>
+
+  <div class="sources">
+    <p>Orbital parameters, 1,000 to 3 million years ago: Berger, A. &amp; Loutre, M. F. (1991). Insolation values for the climate of the last 10 million years. <i>Quaternary Science Reviews</i> 10, 297–317 (NOAA NCEI Paleoclimatology, orbit91). Today and the next 100,000 years: Berger, A. (1978). Long-term variations of daily insolation and Quaternary climatic changes. <i>Journal of the Atmospheric Sciences</i> 35, 2362–2367 (NOAA NCEI, bein1 and bein11). The two solutions differ slightly where they meet (eccentricity by about 0.0005). Sunlight calculated from these parameters with a solar constant of 1360 W/m²; dates use a calendar fixed to the March equinox (March 20). Total summer energy: sunlight summed over all days with more than 275 W/m², after Huybers, P. (2006). Early Pleistocene glacial cycles and the integrated summer insolation forcing. <i>Science</i> 313, 508–511.</p>
+    <p>CO₂: ice cores, Bereiter, B. et al. (2015). Revision of the EPICA Dome C CO₂ record from 800 to 600 kyr before present. <i>Geophysical Research Letters</i>, doi:10.1002/2014GL061957 (composite record, NOAA NCEI). Boron-isotope estimates (dots, ±1σ): Dyez, K. A., Hönisch, B. &amp; Schmidt, G. A. (2018). Early Pleistocene obliquity-scale pCO₂ variability at ~1.5 million years ago. <i>Paleoceanography and Paleoclimatology</i>, doi:10.1029/2018PA003349; de la Vega, E. et al. (2020). Atmospheric CO₂ during the Mid-Piacenzian Warm Period and the M2 glaciation. <i>Scientific Reports</i> 10, 11002; Martínez-Botí, M. A. et al. (2015). Plio-Pleistocene climate sensitivity evaluated using high-resolution CO₂ records. <i>Nature</i> 518, 49–54. Values as recalculated in the Paleo-CO₂ (CenCO₂PIP) database, highest-quality category only (NOAA NCEI). The ice-core record ends in 2001 (368 ppm); today’s value is about 420 ppm.</p>
+    <p>Dust: dust mass accumulation rate at ODP Site 1090, subantarctic Atlantic. Martínez-García, A. et al. (2011). Southern Ocean dust–climate coupling over the past four million years. <i>Nature</i> 476, 312–316 (data: PANGAEA, doi:10.1594/PANGAEA.767458, CC-BY 3.0).</p>
+    <p>Ice volume: benthic foraminifera δ¹⁸O stack, Lisiecki, L. E. &amp; Raymo, M. E. (2005). A Pliocene-Pleistocene stack of 57 globally distributed benthic δ¹⁸O records. <i>Paleoceanography</i> 20, PA1003. Higher δ¹⁸O means more ice on land and colder deep water. Rate of ice loss: change in δ¹⁸O per 1,000 years after a 5,000-year running mean. Note that the LR04 timescale was partly tuned to orbital forcing.</p>
+  </div>
+</div>
+
+<script src="data.js"></script>
+<script>
+(() => {
+const D = window.ORBIT_DATA;
+const S0 = 1360, YEAR = 365.2422, EQX = 79;   // March 20 = day 79 (Jan 1 = day 0)
+const R = Math.PI / 180;
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const MSTART = [0,31,59,90,120,151,181,212,243,273,304,334,365];
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const C = { ink: css("--ink"), muted: css("--muted"), rule: css("--rule"), accent: css("--accent"), warm: css("--warm"), panel: css("--panel"), bg: css("--bg") };
+
+/* ---------- astronomy ---------- */
+// Daily-mean insolation (W/m2). lam: Sun's true longitude from March equinox (deg). varpi: longitude of perihelion (Berger).
+function dailyQ(lat, lam, e, varpi, obl) {
+  const phi = lat * R, eps = obl * R, l = lam * R;
+  const sd = Math.sin(eps) * Math.sin(l), d = Math.asin(sd);
+  const x = -Math.tan(phi) * Math.tan(d);
+  const h0 = x <= -1 ? Math.PI : x >= 1 ? 0 : Math.acos(x);
+  const rho = (1 + e * Math.cos(l - (varpi + 180) * R)) / (1 - e * e);
+  return Math.max(0, S0 / Math.PI * rho * rho * (h0 * Math.sin(phi) * sd + Math.cos(phi) * Math.cos(d) * Math.sin(h0)));
+}
+// days since perihelion when Sun is at true longitude lam
+function daysFromPeri(lam, e, varpi) {
+  let nu = ((lam - (varpi + 180)) % 360 + 360) % 360 * R;
+  const E = 2 * Math.atan(Math.sqrt((1 - e) / (1 + e)) * Math.tan(nu / 2));
+  let M = E - e * Math.sin(E); if (M < 0) M += 2 * Math.PI;
+  return M / (2 * Math.PI) * YEAR;
+}
+// calendar day (0 = Jan 1) for true longitude, equinox fixed at day 79
+function dayOf(lam, e, varpi) {
+  const d = daysFromPeri(lam, e, varpi) - daysFromPeri(0, e, varpi);
+  return (EQX + ((d % YEAR) + YEAR) % YEAR) % YEAR;
+}
+// table day -> lam for given orbit
+function lamTable(e, varpi) {
+  const pts = [];
+  for (let L = 0; L <= 360; L += 0.5) pts.push([((dayOf(L, e, varpi) - EQX) % YEAR + YEAR) % YEAR, L]);
+  pts[pts.length - 1][0] = YEAR;
+  return (day) => {
+    const x = ((day - EQX) % YEAR + YEAR) % YEAR;
+    let i = 1; while (i < pts.length - 1 && pts[i][0] < x) i++;
+    const [x0, l0] = pts[i - 1], [x1, l1] = pts[i];
+    return l0 + (l1 - l0) * (x - x0) / Math.max(1e-9, x1 - x0);
+  };
+}
+// varpi <-> perihelion calendar day
+const periDay = (e, varpi) => dayOf((varpi + 180) % 360, e, varpi);
+function varpiForPeriDay(day, e) {
+  let best = 0, bd = 1e9;
+  for (let w = 0; w < 360; w += 0.25) { const d = Math.abs(((periDay(e, w) - day + YEAR / 2) % YEAR + YEAR) % YEAR - YEAR / 2); if (d < bd) { bd = d; best = w; } }
+  return best;
+}
+const dateStr = (day) => { const d = Math.floor(day) % 365; let m = 0; while (m < 11 && MSTART[m + 1] <= d) m++; return `${MONTHS[m]} ${d - MSTART[m] + 1}`; };
+
+/* ---------- state ---------- */
+const T0 = D.t0, TMAX = 3000, N = TMAX - T0 + 1, I0 = -T0;   // array index i = t - T0; t < 0 is the future
+const TODAY = { e: D.e[I0], w: D.w[I0], o: D.o[I0] };
+const st = { e: TODAY.e, w: TODAY.w, o: TODAY.o, t: 0 };
+const el = (id) => document.getElementById(id);
+const ecc = el("ecc"), obl = el("obl"), per = el("per"), exag = el("exag");
+
+function orbitAt(t) { // t in ka (T0..3000; negative = future), linear interpolation; varpi unwrapped
+  const x = t - T0, i = Math.max(0, Math.min(N - 2, Math.floor(x))), f = x - i;
+  let w0 = D.w[i], w1 = D.w[i + 1]; if (w1 - w0 > 180) w1 -= 360; if (w0 - w1 > 180) w1 += 360;
+  return { e: D.e[i] + f * (D.e[i + 1] - D.e[i]), o: D.o[i] + f * (D.o[i + 1] - D.o[i]), w: ((w0 + f * (w1 - w0)) % 360 + 360) % 360 };
+}
+function lrAt(t) { if (t < 0) return NaN; const T = D.lrT, V = D.lrD; let i = 1; while (i < T.length - 1 && T[i] < t) i++; return V[i - 1] + (V[i] - V[i - 1]) * (t - T[i - 1]) / (T[i] - T[i - 1]); }
+
+function setControls() {
+  ecc.value = st.e; obl.value = st.o; per.value = Math.round(periDay(st.e, st.w));
+}
+ecc.addEventListener("input", () => { const d = periDay(st.e, st.w); st.e = +ecc.value; st.w = varpiForPeriDay(d, st.e); drawExplorer(); });
+obl.addEventListener("input", () => { st.o = +obl.value; drawExplorer(); });
+per.addEventListener("input", () => { st.w = varpiForPeriDay(+per.value, st.e); drawExplorer(); });
+exag.addEventListener("change", drawOrbit);
+el("btnToday").addEventListener("click", () => { Object.assign(st, TODAY); setControls(); drawExplorer(); });
+el("btnSel").addEventListener("click", () => { Object.assign(st, orbitAt(st.t)); setControls(); drawExplorer(); });
+
+/* ---------- canvas helpers ---------- */
+function prep(cv) {
+  const box = cv.parentElement, dpr = Math.min(2, window.devicePixelRatio || 1);
+  const w = Math.max(50, Math.floor(box.clientWidth)), h = Math.floor(box.clientHeight);
+  cv.style.width = w + "px"; cv.style.height = h + "px"; cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+  const g = cv.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+  g.font = "12px " + css("--font-ui"); g.textBaseline = "middle"; return [g, w, h];
+}
+function ramp(v) { // sequential sunlight ramp: near-black -> deep red -> orange -> pale yellow
+  const stops = [[0, [24, 24, 32]], [120, [92, 30, 60]], [250, [176, 52, 40]], [380, [226, 128, 38]], [500, [246, 206, 96]], [600, [252, 246, 214]]];
+  for (let i = 1; i < stops.length; i++) if (v <= stops[i][0] || i === stops.length - 1) {
+    const [a, ca] = stops[i - 1], [b, cb] = stops[i], f = Math.max(0, Math.min(1, (v - a) / (b - a)));
+    return ca.map((c, k) => Math.round(c + f * (cb[k] - c)));
+  }
+}
+
+/* ---------- explorer drawings ---------- */
+const SEAS = { warm: "#fbe6d6", cool: "#e2ebf5", cols: ["#f3cfb4", "#e9ac83", "#bcd0e8", "#93b2d8"], names: ["Spring", "Summer", "Fall", "Winter"] };
+// northern season lengths in days: spring, summer, fall, winter
+function seasonLengths(e, w) { const d = [0, 90, 180, 270, 360].map((l) => dayOf(l % 360, e, w)); return [0, 1, 2, 3].map((k) => (((d[k + 1] - d[k]) % YEAR) + YEAR) % YEAR || YEAR); }
+function drawSeasons() {
+  const [g, w, h] = prep(el("seasons"));
+  const L = 92, Rm = 8, pw = w - L - Rm, rows = [["Your settings", seasonLengths(st.e, st.w)], ["Today", seasonLengths(TODAY.e, TODAY.w)]];
+  rows.forEach(([name, lens], r) => {
+    const y = 6 + r * 34; let x = L;
+    g.fillStyle = C.ink; g.textAlign = "left"; g.font = (r ? "" : "600 ") + "12.5px " + css("--font-ui"); g.fillText(name, 0, y + 13);
+    g.font = "12px " + css("--font-ui");
+    lens.forEach((len, k) => {
+      const ww = len / YEAR * pw; g.fillStyle = SEAS.cols[k]; g.fillRect(x, y, ww - 2, 26);
+      g.fillStyle = C.ink; g.textAlign = "center"; g.fillText(`${SEAS.names[k]} ${len.toFixed(1)} d`, x + ww / 2, y + 13); x += ww;
+    });
+  });
+}
+
+function drawOrbit() {
+  const [g, w, h] = prep(el("orbit"));
+  const eD = Math.min(0.9, st.e * (exag.checked ? 8 : 1));
+  // centre the ellipse in the frame; the Sun sits at the focus, offset a·e toward perihelion
+  const a = Math.min(w * 0.30, h / 2 - 44), ox = w / 2, oy = h / 2 + 8;
+  const cx = ox + a * eD * Math.cos(st.w * R), cy = oy - a * eD * Math.sin(st.w * R);
+  const pos = (L) => { const r = a * (1 - eD * eD) / (1 + eD * Math.cos((L - st.w) * R)); return [cx + r * Math.cos(L * R), cy - r * Math.sin(L * R)]; };
+  // season halves (Earth's longitude = Sun's longitude + 180): spring+summer = Earth 180..360
+  const lens = seasonLengths(st.e, st.w), half = (L0, col) => { g.fillStyle = col; g.beginPath(); g.moveTo(cx, cy); for (let L = L0; L <= L0 + 180; L += 2) { const [x, y] = pos(L); g.lineTo(x, y); } g.closePath(); g.fill(); };
+  half(180, SEAS.warm); half(0, SEAS.cool);
+  const [e1x] = pos(0), [e2x] = pos(180), mx = (e1x + e2x) / 2;
+  g.textAlign = "center"; g.fillStyle = C.ink; g.font = "600 12.5px " + css("--font-ui");
+  g.fillText(`fall + winter: ${(lens[2] + lens[3]).toFixed(1)} days`, mx, cy - 22);
+  g.fillText(`spring + summer: ${(lens[0] + lens[1]).toFixed(1)} days`, mx, cy + 22);
+  g.font = "12px " + css("--font-ui");
+  // orbit
+  g.strokeStyle = C.ink; g.lineWidth = 1.2; g.beginPath();
+  for (let L = 0; L <= 360; L += 2) { const [x, y] = pos(L); L ? g.lineTo(x, y) : g.moveTo(x, y); }
+  g.closePath(); g.stroke();
+  // sun
+  g.fillStyle = C.warm; g.beginPath(); g.arc(cx, cy, 9, 0, 2 * Math.PI); g.fill();
+    // perihelion / aphelion
+  const [px, py] = pos(st.w), [ax, ay] = pos(st.w + 180);
+  g.setLineDash([3, 3]); g.strokeStyle = C.muted; g.beginPath(); g.moveTo(px, py); g.lineTo(ax, ay); g.stroke(); g.setLineDash([]);
+  const lab = (x, y, t, col) => { const dx = x - cx, dy = y - cy, n = Math.hypot(dx, dy) || 1;
+    g.font = "12px " + css("--font-ui"); const tw = g.measureText(t).width, k = Math.abs(dx / n) * (tw / 2 + 10) + Math.abs(dy / n) * 18;
+    const lx = x - dx / n * k, ly = y - dy / n * k;
+    g.textAlign = "center"; g.fillStyle = "rgba(255,255,255,0.85)"; g.fillRect(lx - tw / 2 - 3, ly - 8, tw + 6, 16); g.fillStyle = col; g.fillText(t, lx, ly); };
+  g.fillStyle = C.warm; g.beginPath(); g.arc(px, py, 3, 0, 7); g.fill();
+  lab(px, py, "closest", C.warm); lab(ax, ay, "farthest", C.muted);
+  // seasons: Earth heliocentric longitude = Sun's longitude + 180
+  [[90, "June solstice"], [180, "Sept equinox"], [270, "Dec solstice"], [0, "March equinox"]].forEach(([lam, t]) => {
+    const [x, y] = pos(lam + 180);
+    g.fillStyle = C.accent; g.beginPath(); g.arc(x, y, 5, 0, 7); g.fill();
+    const dx = x - cx, dy = y - cy, n = Math.hypot(dx, dy) || 1;
+    g.fillStyle = C.ink; g.textAlign = "center";
+    const side = Math.abs(dx) > Math.abs(dy);
+    if (side) { const lines = t.split(" "); g.textAlign = dx < 0 ? "right" : "left"; const xo = x + (dx < 0 ? -10 : 10); g.fillText(lines[0], xo, y - 7); g.fillText(lines[1], xo, y + 7); }
+    else g.fillText(t, x, y + (dy > 0 ? 16 : -14));
+  });
+  g.textAlign = "left"; g.fillStyle = C.muted;
+  g.fillText(exag.checked ? "Shape exaggerated ×8" : "True shape", 6, h - 10);
+  // tilt inset (side view at June solstice; Sun to the left)
+  const ix = 70, iy = 50, rr = 22, tilt = st.o * R;
+  g.strokeStyle = C.warm; g.lineWidth = 1;
+  [-12, 0, 12].forEach((dy) => { g.beginPath(); g.moveTo(8, iy + dy); g.lineTo(ix - rr - 6, iy + dy); g.stroke();
+    g.beginPath(); g.moveTo(ix - rr - 6, iy + dy); g.lineTo(ix - rr - 11, iy + dy - 3); g.moveTo(ix - rr - 6, iy + dy); g.lineTo(ix - rr - 11, iy + dy + 3); g.stroke(); });
+  g.fillStyle = C.warm; g.textAlign = "left"; g.fillText("Sun’s rays", 6, iy + 28);
+  g.strokeStyle = C.ink; g.lineWidth = 1; g.beginPath(); g.arc(ix, iy, rr, 0, 7); g.stroke();
+  const nx_ = ix - Math.sin(tilt) * (rr + 12), ny_ = iy - Math.cos(tilt) * (rr + 12);
+  g.beginPath(); g.moveTo(ix + Math.sin(tilt) * (rr + 12), iy + Math.cos(tilt) * (rr + 12)); g.lineTo(nx_, ny_); g.stroke();
+  g.setLineDash([2, 3]); g.strokeStyle = C.muted; g.beginPath(); g.moveTo(ix, iy - rr - 14); g.lineTo(ix, iy + rr + 14); g.stroke(); g.setLineDash([]);
+  g.fillStyle = C.ink; g.textAlign = "center"; g.fillText("N", nx_ - 2, ny_ - 8);
+  g.textAlign = "left"; g.fillText(`tilt ${st.o.toFixed(2)}°`, ix + rr + 10, iy);
+  g.fillStyle = C.muted; g.fillText("June solstice", ix + rr + 10, iy + 15);
+}
+
+function drawHeat() {
+  const [g, w, h] = prep(el("heat"));
+  const L = 40, Rm = 8, T = 8, B = 58, pw = w - L - Rm, ph = h - T - B;
+  const nx = Math.max(60, Math.floor(pw / 3)), ny = 90;
+  const toLam = lamTable(st.e, st.w);
+  const img = g.createImageData(nx, ny), Q = [];
+  for (let j = 0; j < ny; j++) {
+    const lat = 90 - (j + 0.5) * 180 / ny; Q.push([]);
+    for (let i = 0; i < nx; i++) {
+      const day = (i + 0.5) * 365 / nx, q = dailyQ(lat, toLam(day), st.e, st.w, st.o); Q[j].push(q);
+      const c = ramp(q), k = 4 * (j * nx + i); img.data[k] = c[0]; img.data[k + 1] = c[1]; img.data[k + 2] = c[2]; img.data[k + 3] = 255;
+    }
+  }
+  const off = document.createElement("canvas"); off.width = nx; off.height = ny; off.getContext("2d").putImageData(img, 0, 0);
+  g.imageSmoothingEnabled = true; g.drawImage(off, L, T, pw, ph);
+  // contours (marching on grid, simple segment test)
+  g.strokeStyle = "rgba(255,255,255,0.55)"; g.lineWidth = 0.8;
+  const X = (i) => L + (i + 0.5) * pw / nx, Y = (j) => T + (j + 0.5) * ph / ny;
+  for (let lev = 100; lev <= 500; lev += 100) {
+    g.beginPath();
+    for (let j = 0; j < ny - 1; j++) for (let i = 0; i < nx - 1; i++) {
+      const a = Q[j][i], b = Q[j][i + 1], c = Q[j + 1][i + 1], d = Q[j + 1][i], pts = [];
+      const edge = (v1, v2, x1, y1, x2, y2) => { if ((v1 - lev) * (v2 - lev) < 0) { const f = (lev - v1) / (v2 - v1); pts.push([x1 + f * (x2 - x1), y1 + f * (y2 - y1)]); } };
+      edge(a, b, X(i), Y(j), X(i + 1), Y(j)); edge(b, c, X(i + 1), Y(j), X(i + 1), Y(j + 1));
+      edge(c, d, X(i + 1), Y(j + 1), X(i), Y(j + 1)); edge(d, a, X(i), Y(j + 1), X(i), Y(j));
+      if (pts.length >= 2) { g.moveTo(pts[0][0], pts[0][1]); g.lineTo(pts[1][0], pts[1][1]); }
+    }
+    g.stroke();
+  }
+  // 65N line
+  const y65 = T + (90 - 65) / 180 * ph;
+  g.strokeStyle = "#fff"; g.lineWidth = 1.4; g.beginPath(); g.moveTo(L, y65); g.lineTo(L + pw, y65); g.stroke();
+  // axes
+  g.fillStyle = C.ink; g.textAlign = "right";
+  [90, 60, 30, 0, -30, -60, -90].forEach((lat) => g.fillText(lat === 0 ? "0°" : `${Math.abs(lat)}°${lat > 0 ? "N" : "S"}`, L - 5, T + (90 - lat) / 180 * ph));
+  g.textAlign = "center";
+  MONTHS.forEach((m, k) => g.fillText(m[0], L + (MSTART[k] + 15) / 365 * pw, T + ph + 13));
+  // color key
+  const ky = T + ph + 28, kw = Math.min(260, pw);
+  for (let i = 0; i < kw; i++) { const c = ramp(i / kw * 600); g.fillStyle = `rgb(${c})`; g.fillRect(L + i, ky, 1.2, 10); }
+  g.fillStyle = C.ink; g.textAlign = "center";
+  [0, 200, 400, 600].forEach((v) => g.fillText(v, L + v / 600 * kw, ky + 20));
+  g.textAlign = "left"; g.fillText("W/m²", L + kw + 8, ky + 5);
+}
+
+function q65Year(e, w, o, lat = 65) { const toLam = lamTable(e, w), out = []; for (let d = 0; d < 365; d += 2) out.push(dailyQ(lat, toLam(d), e, w, o)); return out; }
+function drawLine65() {
+  const [g, w, h] = prep(el("line65"));
+  const L = 40, Rm = 8, T = 10, B = 24, pw = w - L - Rm, ph = h - T - B, ymax = 600;
+  const Y = (v) => T + ph - v / ymax * ph, X = (d) => L + d / 365 * pw;
+  g.strokeStyle = C.rule; g.lineWidth = 1; g.fillStyle = C.muted; g.textAlign = "right";
+  [0, 200, 400, 600].forEach((v) => { g.beginPath(); g.moveTo(L, Y(v)); g.lineTo(L + pw, Y(v)); g.stroke(); g.fillText(v, L - 5, Y(v)); });
+  g.textAlign = "center"; MONTHS.forEach((m, k) => g.fillText(m[0], X(MSTART[k] + 15), T + ph + 12));
+  const plot = (arr, col, lw) => { g.strokeStyle = col; g.lineWidth = lw; g.beginPath(); arr.forEach((v, k) => { const x = X(k * 2), y = Y(v); k ? g.lineTo(x, y) : g.moveTo(x, y); }); g.stroke(); };
+  // solstices and equinoxes for your settings
+  g.font = "11.5px " + css("--font-ui"); g.textAlign = "center";
+  [[0, "Mar equinox"], [90, "Jun solstice"], [180, "Sep equinox"], [270, "Dec solstice"]].forEach(([lam, t]) => {
+    const x = X(dayOf(lam, st.e, st.w));
+    g.strokeStyle = C.muted; g.lineWidth = 1; g.setLineDash([3, 3]); g.beginPath(); g.moveTo(x, T + 40); g.lineTo(x, T + ph - 26); g.moveTo(x, T + ph - 6); g.lineTo(x, T + ph); g.stroke(); g.setLineDash([]);
+    const tw = g.measureText(t).width, lx = Math.min(L + pw - tw / 2, Math.max(L + tw / 2, x));
+    g.fillStyle = C.muted; g.fillText(t, lx, T + ph - 16);
+  });
+  g.font = "12px " + css("--font-ui");
+  plot(q65Year(TODAY.e, TODAY.w, TODAY.o), "#9aa1a8", 2);
+  plot(q65Year(st.e, st.w, st.o), C.accent, 2);
+  g.font = "12.5px " + css("--font-ui"); g.textAlign = "left";
+  g.strokeStyle = C.accent; g.lineWidth = 2; g.beginPath(); g.moveTo(L + 10, T + 8); g.lineTo(L + 30, T + 8); g.stroke();
+  const yr = (e, w, o) => summerEnergy(e, w, o, 65, -1).toFixed(2);   // all days: yearly total
+  g.fillStyle = C.ink; g.fillText(`your settings: ${yr(st.e, st.w, st.o)} GJ/m² per year`, L + 36, T + 8);
+  g.strokeStyle = "#9aa1a8"; g.beginPath(); g.moveTo(L + 10, T + 26); g.lineTo(L + 30, T + 26); g.stroke();
+  g.fillText(`today: ${yr(TODAY.e, TODAY.w, TODAY.o)} GJ/m² per year`, L + 36, T + 26);
+}
+
+function drawReadout() {
+  const qs = dailyQ(65, 90, st.e, st.w, st.o), q0 = dailyQ(65, 90, TODAY.e, TODAY.w, TODAY.o);
+  const ann = S0 / 4 / Math.sqrt(1 - st.e * st.e), ann0 = S0 / 4 / Math.sqrt(1 - TODAY.e * TODAY.e);
+  const summer = ((dayOf(180, st.e, st.w) - dayOf(0, st.e, st.w)) % YEAR + YEAR) % YEAR;
+  const sgn = (x, n) => (x >= 0 ? "+" : "−") + Math.abs(x).toFixed(n);
+  el("readout").innerHTML = `
+    <dt>65°N, June solstice</dt><dd>${qs.toFixed(0)} W/m²</dd>
+    <dt>&nbsp;&nbsp;change from today</dt><dd>${sgn(qs - q0, 0)} W/m²</dd>
+    <dt>65°N total summer energy</dt><dd>${summerEnergy(st.e, st.w, st.o).toFixed(2)} GJ/m²</dd>
+    <dt>&nbsp;&nbsp;change from today</dt><dd>${sgn(summerEnergy(st.e, st.w, st.o) - summerEnergy(TODAY.e, TODAY.w, TODAY.o), 2)} GJ/m²</dd>
+    <dt>Global yearly average</dt><dd>${ann.toFixed(2)} W/m²</dd>
+    <dt>&nbsp;&nbsp;change from today</dt><dd>${sgn(ann - ann0, 2)} W/m²</dd>
+    <dt>Northern spring + summer</dt><dd>${summer.toFixed(1)} days</dd>
+    <dt>Northern fall + winter</dt><dd>${(YEAR - summer).toFixed(1)} days</dd>`;
+  el("eccV").textContent = st.e.toFixed(4);
+  el("oblV").textContent = st.o.toFixed(2) + "°";
+  el("perV").textContent = dateStr(periDay(st.e, st.w));
+}
+// Whole Earth, one year: S0 · πR² · (seconds per year) / √(1 − e²)
+const earthYear = (e) => S0 * Math.PI * 6.371e6 ** 2 * YEAR * 86400 / Math.sqrt(1 - e * e) / 1e24;
+function drawHeatTot() {
+  const a = earthYear(st.e), b = earthYear(TODAY.e);
+  el("heatTot").innerHTML = `Whole Earth, one year: <b>${a.toFixed(3)} × 10²⁴ J</b> (today ${b.toFixed(3)} × 10²⁴ J; change ${((a / b - 1) * 100).toFixed(2)}%)`;
+}
+function drawExplorer() { drawHeatTot(); drawReadout(); drawOrbit(); drawSeasons(); drawHeat(); drawLine65(); }
+
+/* ---------- time record ---------- */
+// Summer energy (Huybers 2006): sum of daily sunlight over all days above 275 W/m2, in GJ/m2.
+// Integrate over the Sun's longitude: dt = dλ·YEAR/(2π) / (ρ²·√(1−e²)).
+function summerEnergy(e, w, o, lat = 65, tau = 275) {
+  let s = 0;
+  const dl = 0.25;
+  for (let L = dl / 2; L < 360; L += dl) {
+    const q = dailyQ(lat, L, e, w, o); if (q <= tau) continue;
+    const rho = (1 + e * Math.cos((L - (w + 180)) * R)) / (1 - e * e);
+    s += q * (YEAR * dl / 360) * 86400 / (rho * rho * Math.sqrt(1 - e * e));
+  }
+  return s / 1e9;
+}
+const Q65 = new Float32Array(N), PREC = new Float32Array(N), JS = new Float32Array(N), LR1 = new Float32Array(N);
+for (let i = 0; i < N; i++) { Q65[i] = dailyQ(65, 90, D.e[i], D.w[i], D.o[i]); PREC[i] = D.e[i] * Math.sin(D.w[i] * R); JS[i] = summerEnergy(D.e[i], D.w[i], D.o[i]); LR1[i] = lrAt(i + T0); }
+// Rate of ice loss: change in δ18O per 1,000 years, forward in time, after a 5-kyr running mean. Positive = ice shrinking.
+const LR5 = LR1.map((_, i) => { let s = 0, n = 0; for (let j = i - 2; j <= i + 2; j++) if (j >= 0 && j < N && Number.isFinite(LR1[j])) { s += LR1[j]; n++; } return n ? s / n : NaN; });
+const LOSS = new Float32Array(N);
+for (let t = 0; t < N; t++) { if (t < I0) { LOSS[t] = NaN; continue; } const hi = Math.min(N - 1, t + 1), lo = Math.max(I0, t - 1); LOSS[t] = (LR5[hi] - LR5[lo]) / (hi - lo); }
+// summer energy rescaled onto the ice-loss axis (same mean and spread) for the overlay
+const stats = (a0) => { const a = Array.from(a0).filter(Number.isFinite); let m = 0; a.forEach((v) => m += v); m /= a.length; let s = 0; a.forEach((v) => s += (v - m) ** 2); return [m, Math.sqrt(s / a.length)]; };
+const [jm, js] = stats(JS), [lm, ls] = stats(LOSS);
+const JS_ON_LOSS = JS.map((v) => lm + (v - jm) / js * ls);
+// Track groups and colours: orbit (blue), sunlight (orange), Earth's response (green).
+// Colour-blind check (Machado 2009 simulation, OKLab): all pairs of these five differ by ΔE ≥ 12 for normal, deutan, protan and tritan vision.
+const GROUP = { orbit: { col: "#0072B2", name: "Orbit" }, sun: { col: "#D08C00", name: "Sunlight" }, earth: { col: "#3A9AD9", name: "Ice" } };
+const COL = { co2: "#222222", co2pt: "#a3a3a3", dust: "#8c564b", ice: "#3A9AD9" };
+const colOf = (tr) => tr.col || GROUP[tr.group].col;
+const seriesAt = (T, V, t) => { if (t >= -0.5 && t < T[0] && T[0] < 3) return V[0]; if (!(t >= T[0] && t <= T[T.length - 1])) return NaN; let i = 1; while (i < T.length - 1 && T[i] < t) i++; return V[i - 1] + (V[i] - V[i - 1]) * (t - T[i - 1]) / ((T[i] - T[i - 1]) || 1); };
+const iceCO2At = (t) => { const T = D.iceT, V = D.iceC; if (t < T[0] || t > T[T.length - 1]) return NaN; let i = 1; while (i < T.length - 1 && T[i] < t) i++; return V[i - 1] + (V[i] - V[i - 1]) * (t - T[i - 1]) / ((T[i] - T[i - 1]) || 1); };
+const tracks = [
+  { id: "ecc", group: "orbit", name: "Eccentricity", get: (t) => D.e[t - T0], val: (v) => v.toFixed(4), lo: 0, hi: 0.06, ticks: [0, 0.03, 0.06], fmt: (v) => v.toFixed(2) },
+  { id: "obl", group: "orbit", name: "Obliquity (tilt)", get: (t) => D.o[t - T0], val: (v) => v.toFixed(2) + "°", lo: 22, hi: 24.6, ticks: [22, 23, 24], fmt: (v) => v.toFixed(0) + "°" },
+  { id: "prec", group: "orbit", name: "Precession index (e·sin ϖ)", get: (t) => PREC[t - T0], val: (v) => v.toFixed(4), lo: -0.06, hi: 0.06, ticks: [-0.05, 0, 0.05], fmt: (v) => v.toFixed(2) },
+  { id: "q65", group: "sun", name: "Sunlight at 65°N, June solstice", get: (t) => Q65[t - T0], val: (v) => v.toFixed(0) + " W/m²", lo: 440, hi: 580, ticks: [450, 500, 550], fmt: (v) => v.toFixed(0) },
+  { id: "js", group: "sun", name: "Total summer energy at 65°N (days above 275 W/m²)", get: (t) => JS[t - T0], val: (v) => v.toFixed(2) + " GJ/m²", lo: 4.6, hi: 5.3, ticks: [4.8, 5.0, 5.2], fmt: (v) => v.toFixed(1) },
+  { id: "co2", group: "earth", col: COL.co2, name: "Atmospheric CO₂", co2: true, get: (t) => iceCO2At(t), val: (v) => v.toFixed(0) + " ppm", lo: 150, hi: 480, ticks: [200, 300, 400], fmt: (v) => v.toFixed(0) },
+  { id: "dust", group: "earth", col: COL.dust, name: "Dust reaching the Southern Ocean (ODP 1090)", series: ["dustT", "dustV"], get: (t) => seriesAt(D.dustT, D.dustV, t), val: (v) => v.toFixed(1) + " g/cm² per 1,000 yr", lo: 0, hi: 20, ticks: [0, 5, 10, 15], fmt: (v) => v.toFixed(0) },
+  { id: "ice", group: "earth", col: COL.ice, name: "Ice volume (benthic δ¹⁸O)", lr: true, get: (t) => lrAt(t), val: (v) => v.toFixed(2) + " ‰", lo: 5.2, hi: 2.4, ticks: [3, 4, 5], fmt: (v) => v.toFixed(0) },
+  { id: "loss", group: "earth", col: COL.ice, name: "Rate of ice loss (change in δ¹⁸O per 1,000 yr)", get: (t) => LOSS[t - T0], val: (v) => v.toFixed(3) + " ‰/kyr", lo: -0.15, hi: 0.3, ticks: [-0.1, 0, 0.1, 0.2], fmt: (v) => v.toFixed(1) },
+];
+const TRACK_H = 104, TRACK_GAP = 12, HEAD = 27, TB_T = 4, TB_B = 40;
+let order = tracks.map((tr) => tr.id), shown = new Set(order);
+try { const sv = JSON.parse(localStorage.getItem("orbitTracks3") || "null"); if (sv && Array.isArray(sv.order) && sv.order.length === order.length && order.every((id) => sv.order.includes(id))) order = sv.order; } catch (e) {}
+const saveTracks = () => { try { localStorage.setItem("orbitTracks3", JSON.stringify({ order })); } catch (e) {} };
+// 1-kyr versions of the irregular records, for the compare chart
+function resample(T, V) { const out = new Float32Array(N).fill(NaN); let j = 0; for (let i = 0; i < N; i++) { const t = i + T0; if (t < T[0] - 0.5 || t > T[T.length - 1]) continue; while (j < T.length - 2 && T[j + 1] < t) j++; const f = (t - T[j]) / ((T[j + 1] - T[j]) || 1); out[i] = t < T[0] ? V[0] : V[j] + Math.max(0, Math.min(1, f)) * (V[j + 1] - V[j]); } return out; }
+const CO2_1 = resample(D.iceT, D.iceC), DUST_1 = resample(D.dustT, D.dustV);
+const CMP = [
+  { id: "ecc", name: "Eccentricity", unit: "", a: (i) => D.e[i] },
+  { id: "obl", name: "Tilt", unit: "°", a: (i) => D.o[i] },
+  { id: "prec", name: "Precession index", unit: "", a: (i) => PREC[i] },
+  { id: "q65", name: "June sunlight 65°N", unit: "W/m²", a: (i) => Q65[i] },
+  { id: "js", name: "Summer energy 65°N", unit: "GJ/m²", a: (i) => JS[i] },
+  { id: "co2", name: "CO₂ (ice cores)", unit: "ppm", a: (i) => CO2_1[i] },
+  { id: "dust", name: "Dust", unit: "g/cm² per 1,000 yr", a: (i) => DUST_1[i] },
+  { id: "ice", name: "Ice volume", unit: "benthic δ¹⁸O, ‰; higher = more ice", a: (i) => LR1[i], flipName: ["more ice ↑", "less ice ↑"] },
+  { id: "loss", name: "Ice loss rate", unit: "‰ per 1,000 yr; up = melting", a: (i) => LOSS[i] },
+];
+let cmpFlip = new Set(["ice"]);
+const cmpCol = (id) => colOf(tracks.find((x) => x.id === id));
+// colours for the compare chart: each record's own colour unless already taken, then a distinct spare colour (never dashed)
+const SPARE = ["#8a8f96", "#6a3d9a", "#D55E00", "#009E73"];   // lines are also labelled by name, so colour is not the only cue
+function cmpColors() { const out = {}, used = []; starred.forEach((id) => { let c = cmpCol(id); if (used.includes(c)) c = SPARE.find((x) => !used.includes(x)) || c; used.push(c); out[id] = c; }); return out; }
+const cmpLabelUnused = (c) => c.flipName ? `${c.name} (${c.flipName[cmpFlip.has(c.id) ? 1 : 0]})` : c.name + (cmpFlip.has(c.id) ? " (flipped)" : "");
+let starred = ["js", "co2", "ice"];
+const toggleStar = (id) => { starred = starred.includes(id) ? starred.filter((x) => x !== id) : [...starred, id]; uiSig = ""; buildLegend(); drawTime(); };
+function buildLegend() {
+  const lg = el("cmpLegend"); lg.innerHTML = "";
+  if (!starred.length) { lg.innerHTML = `<span class="empty">Nothing starred yet. Click ☆ compare on a chart in Part 2.</span>`; return; }
+  const cols = cmpColors();
+  starred.forEach((id) => {
+    const c = CMP.find((x) => x.id === id), col = cols[id], fl = cmpFlip.has(id);
+    const dir = c.flipName ? `(${c.flipName[fl ? 1 : 0]})` : fl ? "(flipped: up = lower)" : "";
+    const nm = document.createElement("span"); nm.className = "nm";
+    nm.innerHTML = `<span class="sw" style="border-top-color:${col}"></span><b>${c.name}</b> <span class="dir">${dir}</span>`;
+    const fb = document.createElement("button"); fb.type = "button"; fb.textContent = "⇅ Flip"; fb.title = "Turn this line upside down";
+    fb.addEventListener("click", () => { fl ? cmpFlip.delete(id) : cmpFlip.add(id); buildLegend(); drawTime(); });
+    const rb = document.createElement("button"); rb.type = "button"; rb.textContent = "Remove"; rb.title = "Take this record off the chart";
+    rb.addEventListener("click", () => toggleStar(id));
+    lg.append(nm, fb, rb);
+  });
+}
+let uiSig = "";
+// move visible chart from position a to b; hidden charts keep their places among the rest
+function moveTrack(vis, a, b) {
+  const ids = vis.map((t) => t.id), [m] = ids.splice(a, 1); ids.splice(b, 0, m);
+  let j = 0; order = order.map((id) => shown.has(id) ? ids[j++] : id); saveTracks(); drawTime();
+}
+function buildTrackUI(vis, geom) {
+  const sig = vis.map((t) => t.id).join() + "|" + starred.join() + "|" + geom.w;
+  if (sig === uiSig) return; uiSig = sig;
+  const box = el("trackBtns"); box.innerHTML = "";
+  const blockH = HEAD + TRACK_H + TRACK_GAP, drop = document.createElement("div"); drop.className = "drop"; box.appendChild(drop);
+  vis.forEach((tr, k) => {
+    const top = geom.T + k * blockH + 2;
+    const x = document.createElement("div"); x.className = "tb"; x.style.top = top + "px";
+    const on = starred.includes(tr.id);
+    x.innerHTML = `<button type="button" class="star" aria-pressed="${on}" title="${on ? "Remove from" : "Add to"} the comparison in Part 3">${on ? "★ in Part 3" : "☆ compare"}</button>`;
+    x.firstChild.addEventListener("click", () => toggleStar(tr.id));
+    box.appendChild(x);
+    // grab handle: drag up or down to move the chart
+    const gr = document.createElement("div"); gr.className = "grip"; gr.style.top = top + "px"; gr.textContent = "⠿";
+    gr.title = "Drag to move this chart"; gr.setAttribute("aria-label", `Move ${tr.name}`); gr.tabIndex = 0;
+    let dragging = false, target = k;
+    const idxAt = (ev) => { const y = ev.clientY - box.getBoundingClientRect().top - geom.T; return Math.max(0, Math.min(vis.length, Math.round(y / blockH))); };
+    gr.addEventListener("pointerdown", (ev) => { dragging = true; target = k; gr.classList.add("dragging"); try { gr.setPointerCapture(ev.pointerId); } catch (e) {} ev.preventDefault(); });
+    gr.addEventListener("pointermove", (ev) => { if (!dragging) return; target = idxAt(ev); drop.style.display = "block"; drop.style.top = (geom.T + target * blockH - TRACK_GAP / 2 - 1) + "px"; });
+    const finish = () => { if (!dragging) return; dragging = false; gr.classList.remove("dragging"); drop.style.display = "none";
+      if (target !== k && target !== k + 1) moveTrack(vis, k, target > k ? target - 1 : target); };
+    gr.addEventListener("pointerup", finish); gr.addEventListener("pointercancel", finish);
+    gr.addEventListener("keydown", (ev) => { if (ev.key === "ArrowUp" && k > 0) { ev.preventDefault(); moveTrack(vis, k, k - 1); } if (ev.key === "ArrowDown" && k < vis.length - 1) { ev.preventDefault(); moveTrack(vis, k, k + 1); } });
+    box.appendChild(gr);
+  });
+}
+let tGeom = null, win = [T0, TMAX];
+const MIN_SPAN = 40;
+function setWin(a, b) { // a = younger edge, b = older edge (ka)
+  let span = Math.max(MIN_SPAN, Math.min(TMAX - T0, b - a));
+  a = Math.max(T0, Math.min(TMAX - span, a)); win = [a, a + span]; drawTime();
+}
+const zoomBy = (f, centre) => { const c = centre ?? Math.min(win[1], Math.max(win[0], st.t)), sp = (win[1] - win[0]) * f; setWin(c - (c - win[0]) * f, c - (c - win[0]) * f + sp); };
+document.querySelectorAll(".zIn").forEach((b) => b.addEventListener("click", () => zoomBy(0.5)));
+document.querySelectorAll(".zOut").forEach((b) => b.addEventListener("click", () => zoomBy(2)));
+document.querySelectorAll(".zAll").forEach((b) => b.addEventListener("click", () => setWin(T0, TMAX)));
+el("time").addEventListener("wheel", (ev) => { if (!ev.ctrlKey && !ev.metaKey) return; ev.preventDefault();
+  const r = el("time").getBoundingClientRect(), t = win[1] - (ev.clientX - r.left - tGeom.L) / tGeom.pw * (win[1] - win[0]);
+  zoomBy(Math.exp(ev.deltaY * 0.01), Math.max(win[0], Math.min(win[1], t))); }, { passive: false });
+// overview strip: whole record, with the zoom window as a draggable box
+let ovGeom = null, ovDrag = null;
+function drawOverview() {
+  const [g, w, h] = prep(el("overview")), L = 58, Rm = 12, pw = w - L - Rm, T = 11, H = h - 25;
+  const X = (t) => L + (TMAX - t) / (TMAX - T0) * pw; ovGeom = { L, pw, X };
+  g.fillStyle = C.panel; g.fillRect(L, T, pw, H);
+  g.strokeStyle = COL.ice; g.lineWidth = 0.8; g.beginPath();
+  D.lrT.forEach((t, i) => { const x = X(t), y = T + (D.lrD[i] - 2.4) / (5.2 - 2.4) * H; i ? g.lineTo(x, y) : g.moveTo(x, y); }); g.stroke();
+  const xa = X(win[1]), xb = X(win[0]);
+  g.fillStyle = "rgba(17,20,23,0.16)"; g.fillRect(xa, T, xb - xa, H);
+  g.strokeStyle = C.ink; g.lineWidth = 1.5; g.strokeRect(xa, T, xb - xa, H);
+  g.fillStyle = C.ink; [xa, xb].forEach((x) => g.fillRect(x - 3, T + 3, 6, H - 6));
+  const xc = X(st.t); g.strokeStyle = C.ink; g.lineWidth = 2; g.beginPath(); g.moveTo(xc, T); g.lineTo(xc, T + H); g.stroke();
+  g.fillStyle = C.ink; g.beginPath(); g.moveTo(xc - 6, 1); g.lineTo(xc + 6, 1); g.lineTo(xc, T); g.closePath(); g.fill();
+  g.fillStyle = C.muted; g.font = "11px " + css("--font-ui"); g.textAlign = "left"; g.fillText("3 Ma", L, h - 7); g.textAlign = "right"; g.fillText("+100 kyr", L + pw, h - 7);
+  g.textAlign = "center"; g.fillText("ice volume, whole record", L + pw / 2, h - 7); g.font = "12px " + css("--font-ui");
+  const sp = win[1] - win[0];
+  el("zLab").textContent = sp >= TMAX - T0 - 1 ? "all" : `${fmtT(win[1])} – ${fmtT(win[0])}`;
+}
+const fmtT = (t) => { t = Math.round(t); return t === 0 ? "today" : t > 0 ? (t >= 1000 ? (t / 1000).toFixed(2).replace(/0$/, "") + " Ma" : t + " ka") : "+" + (-t) + " kyr"; };
+const ovT = (ev) => { const r = el("overview").getBoundingClientRect(); return TMAX - (ev.clientX - r.left - ovGeom.L) / ovGeom.pw * (TMAX - T0); };
+const ovX = (ev) => ev.clientX - el("overview").getBoundingClientRect().left;
+function ovHit(x) { // what is under the pointer on the strip (nearest of date marker / window edges wins)
+  const xa = ovGeom.X(win[1]), xb = ovGeom.X(win[0]), xc = ovGeom.X(st.t), full = win[1] - win[0] >= TMAX - T0 - 1;
+  const near = [["date", Math.abs(x - xc)], ["old", Math.abs(x - xa)], ["young", Math.abs(x - xb)]].filter(([, d]) => d < 10).sort((p, q) => p[1] - q[1]);
+  if (near.length) return near[0][0];
+  if (!full && x > xa && x < xb) return "pan";
+  return "new";
+}
+el("overview").addEventListener("pointerdown", (ev) => {
+  try { el("overview").setPointerCapture(ev.pointerId); } catch (e) {}
+  const t = ovT(ev), mode = ovHit(ovX(ev));
+  ovDrag = { mode, start: t, x0: ovX(ev), off: t - win[0], moved: false };
+  if (mode === "date") setDate(t);
+});
+el("overview").addEventListener("pointermove", (ev) => {
+  const x = ovX(ev);
+  if (!ovDrag) { const m = ovHit(x); el("overview").style.cursor = m === "date" ? "ew-resize" : m === "old" || m === "young" ? "col-resize" : m === "pan" ? "grab" : "pointer"; return; }
+  if (!ovDrag.moved && Math.abs(x - ovDrag.x0) < 4) return;
+  ovDrag.moved = true;
+  const t = Math.max(T0, Math.min(TMAX, ovT(ev))), sp = win[1] - win[0];
+  if (ovDrag.mode === "date") setDate(t);
+  else if (ovDrag.mode === "pan") setWin(t - ovDrag.off, t - ovDrag.off + sp);
+  else if (ovDrag.mode === "old") setWin(win[0], Math.max(t, win[0] + MIN_SPAN));
+  else if (ovDrag.mode === "young") setWin(Math.min(t, win[1] - MIN_SPAN), win[1]);
+  else { const a = Math.min(t, ovDrag.start), b = Math.max(t, ovDrag.start); if (b - a > 5) setWin(a, b); }
+});
+el("overview").addEventListener("pointerup", (ev) => {
+  if (ovDrag && !ovDrag.moved && (ovDrag.mode === "new" || ovDrag.mode === "pan")) setDate(Math.max(T0, Math.min(TMAX, ovT(ev))));   // a click picks a date
+  ovDrag = null;
+});
+function drawTime() {
+  const vis = order.filter((id) => shown.has(id)).map((id) => tracks.find((x) => x.id === id));
+  const cv = el("time"); cv.parentElement.style.height = (TB_T + TB_B + Math.max(1, vis.length) * (HEAD + TRACK_H + TRACK_GAP) - TRACK_GAP) + "px";
+  const [g, w, h] = prep(cv);
+  const [t0, t1] = win, span = t1 - t0;
+  const L = 58, Rm = 12, T = TB_T, B = TB_B, gap = TRACK_GAP, pw = w - L - Rm, th = TRACK_H;
+  const X = (t) => L + (t1 - t) / span * pw;
+  tGeom = { L, pw, X };
+  const line = (get, Y) => { g.beginPath(); let first = true; for (let t = Math.max(T0, Math.floor(t0)); t <= Math.min(TMAX, Math.ceil(t1)); t++) { const v = get(t); if (!Number.isFinite(v)) { first = true; continue; } const x = X(t), y = Y(v); first ? g.moveTo(x, y) : g.lineTo(x, y); first = false; } g.stroke(); };
+  const series = (T_, V_, Y) => { g.beginPath(); let first = true; T_.forEach((t, i) => { if (t < t0 - 3 || t > t1 + 3) return; const x = X(t), y = Y(V_[i]); first ? g.moveTo(x, y) : g.lineTo(x, y); first = false; }); g.stroke(); };
+  buildTrackUI(vis, { T, w });
+  vis.forEach((tr, k) => {
+    const col = colOf(tr);
+    const y0 = T + k * (HEAD + th + gap) + HEAD, Y = (v) => y0 + th - (Math.max(Math.min(v, Math.max(tr.lo, tr.hi)), Math.min(tr.lo, tr.hi)) - tr.lo) / (tr.hi - tr.lo) * th;
+    g.fillStyle = C.panel; g.fillRect(L, y0, pw, th);
+    g.fillStyle = col; g.fillRect(L, y0, 3, th);
+    g.strokeStyle = C.rule; g.lineWidth = 1; g.fillStyle = C.muted; g.textAlign = "right";
+    tr.ticks.forEach((v) => { g.beginPath(); g.moveTo(L, Y(v)); g.lineTo(L + pw, Y(v)); g.stroke(); g.fillText(tr.fmt(v), L - 5, Y(v)); });
+    g.save(); g.beginPath(); g.rect(L + 3, y0, pw - 3, th); g.clip();
+    g.strokeStyle = col; g.lineWidth = span > 1500 ? 1 : 1.5;
+    if (tr.lr) series(D.lrT, D.lrD, Y);
+    else if (tr.series) series(D[tr.series[0]], D[tr.series[1]], Y);
+    else if (tr.co2) {
+      // boron-isotope estimates: dots with 1-sigma bars (lighter); ice cores: line
+      g.strokeStyle = COL.co2pt; g.fillStyle = COL.co2pt; g.lineWidth = 1;
+      D.boron.forEach(([t, c, up, dn]) => { if (t < t0 || t > t1) return; const x = X(t); g.beginPath(); g.moveTo(x, Y(c - dn)); g.lineTo(x, Y(c + up)); g.stroke(); g.beginPath(); g.arc(x, Y(c), 2.4, 0, 7); g.fill(); });
+      g.strokeStyle = col; g.lineWidth = span > 1000 ? 1.2 : 1.6; series(D.iceT, D.iceC, Y);
+    }
+    else line(tr.get, Y);
+    g.restore();
+    // label
+    const hy = y0 - HEAD / 2;
+    let label;
+    { const v = tr.get(tr.lr || tr.co2 || tr.series ? st.t : Math.round(st.t));
+      label = `${tr.name}:  ` + (Number.isFinite(v) ? tr.val(v) : st.t < 0 ? "no data for the future" : tr.co2 ? "no ice core this old (dots: boron estimates)" : "no data"); }
+    g.font = "600 12.5px " + css("--font-ui"); g.textAlign = "left"; g.fillStyle = C.ink;
+    g.fillStyle = col; g.fillRect(L, hy - 6, 3, 12); g.fillStyle = C.ink; g.fillText(label, L + 8, hy);
+    const labelEnd = L + 8 + g.measureText(label).width; g.font = "12px " + css("--font-ui");
+    // right-hand notes / legends (text in ink; coloured line segments carry identity)
+    // legends: in the plot's top-right corner (header right is taken by the chart buttons)
+    const key = (items) => { let x = L + pw - 8; const ky = y0 + 10; g.textAlign = "right"; items.slice().reverse().forEach(([c, lw, t, dash]) => { const ww = g.measureText(t).width; g.fillStyle = "rgba(245,247,248,0.92)"; g.fillRect(x - ww - 28, ky - 8, ww + 30, 16); g.fillStyle = C.ink; g.fillText(t, x, ky); if (c) { g.strokeStyle = c; g.lineWidth = lw; if (dash) g.setLineDash([5, 3]); g.beginPath(); g.moveTo(x - ww - 24, ky); g.lineTo(x - ww - 6, ky); g.stroke(); g.setLineDash([]); } x -= ww + 38; }); };
+    if (tr.lr) key([[null, 0, "more ice ↓"]]);
+    if (tr.series) key([[null, 0, "more dust ↑"]]);
+    if (tr.id === "loss") key([[null, 0, "up = melting"]]);
+    if (tr.co2) key([[col, 1.6, "ice cores"], [COL.co2pt, 3, "boron isotopes (±1σ)"]]);
+  });
+  const yb = h - B;
+  // future: orbital calculation only
+  if (t0 < 0 && vis.length) { const xa = X(0), xb = X(Math.max(t0, T0)); g.fillStyle = "rgba(17,20,23,0.05)"; g.fillRect(xa, T, xb - xa, yb - T);
+    g.strokeStyle = C.muted; g.lineWidth = 1; g.setLineDash([4, 3]); g.beginPath(); g.moveTo(xa, T); g.lineTo(xa, yb); g.stroke(); g.setLineDash([]);
+  }
+  // x axis
+  g.fillStyle = C.ink; g.textAlign = "center";
+  const [step, labStep] = span > 1500 ? [250, 500] : span > 700 ? [100, 200] : span > 300 ? [50, 100] : span > 120 ? [10, 50] : [5, 10];
+  for (let t = Math.ceil(t0 / step) * step; t <= t1; t += step) {
+    const x = X(t); g.strokeStyle = C.rule; g.beginPath(); g.moveTo(x, yb); g.lineTo(x, yb + 4); g.stroke();
+    g.textAlign = x > L + pw - 20 ? "right" : x < L + 20 ? "left" : "center";
+    if (t % labStep === 0) g.fillText(span > 1500 ? (t === 0 ? "today" : (t / 1000).toFixed(1) + " Ma") : t === 0 ? "today" : t < 0 ? String(-t) : t.toLocaleString(), x, yb + 14);
+  }
+  axisTitle(g, X, L, pw, t0, t1, span, h - 8);
+  // cursor (selected date)
+  if (st.t >= t0 && st.t <= t1) { const xc = X(st.t); g.strokeStyle = C.ink; g.lineWidth = 1.5; g.beginPath(); g.moveTo(xc, T); g.lineTo(xc, yb); g.stroke(); }
+  const tr_ = Math.round(st.t);
+  el("tNow").textContent = tr_ === 0 ? "today" : tr_ > 0 ? `${tr_.toLocaleString()} thousand years ago` : `${(-tr_).toLocaleString()} thousand years in the future`;
+  if (document.activeElement !== el("tYears")) el("tYears").value = Math.round(-st.t * 1000);
+  drawOverview();
+  drawCmp();
+  drawXY();
+}
+buildLegend();
+// axis title: "ago" under the past; "from now" under the future part, only when the window includes it
+function axisTitle(g, X, L, pw, t0, t1, span, y) {
+  g.textAlign = "center"; g.fillStyle = C.muted;
+  const past = span > 1500 ? "million years ago (Ma)" : "thousand years ago";
+  const x0 = X(Math.max(0, t0));                      // x of today (or right edge if today is off-screen)
+  if (t0 < 0 && L + pw - x0 > 230) {
+    g.fillText(past, (L + x0) / 2, y);
+    g.fillText("thousand years from now (orbit only)", (x0 + L + pw) / 2, y);
+  } else g.fillText(past, L + pw / 2, y);
+}
+function drawCmp() {
+  const [g, w, h] = prep(el("cmp")), [t0, t1] = win, span = t1 - t0;
+  const L = 58, Rm = 150, T = 8, B = 40, pw = w - L - Rm, ph = h - T - B, lo = -3, hi = 3;   // right margin holds the line names
+  cmpGeom = { L, pw };
+  const X = (t) => L + (t1 - t) / span * pw, Y = (v) => T + ph - (Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo) * ph;
+  g.fillStyle = C.panel; g.fillRect(L, T, pw, ph);
+  g.strokeStyle = C.rule; g.lineWidth = 1; g.fillStyle = C.muted; g.textAlign = "right";
+  [-2, -1, 0, 1, 2].forEach((v) => { g.beginPath(); g.moveTo(L, Y(v)); g.lineTo(L + pw, Y(v)); g.lineWidth = v === 0 ? 1.4 : 1; g.stroke(); g.fillText(v === 0 ? "avg" : (v > 0 ? "+" : "−") + Math.abs(v), L - 5, Y(v)); });
+  g.save(); g.beginPath(); g.rect(L, T, pw, ph); g.clip();
+  const i0 = Math.max(0, Math.floor(t0) - T0), i1 = Math.min(N - 1, Math.ceil(t1) - T0), cols = cmpColors(), tags = [];
+  starred.forEach((id) => {
+    const c = CMP.find((x) => x.id === id), vals = []; for (let i = i0; i <= i1; i++) { const v = c.a(i); if (Number.isFinite(v)) vals.push(v); }
+    const col = cols[id];
+    if (vals.length < 3) return;
+    const m = vals.reduce((p, q) => p + q, 0) / vals.length, sd = Math.sqrt(vals.reduce((p, q) => p + (q - m) ** 2, 0) / vals.length) || 1, sg = cmpFlip.has(id) ? -1 : 1;
+    g.strokeStyle = col; g.lineWidth = span > 1500 ? 1.1 : 1.8;
+    g.beginPath(); let first = true;
+    for (let i = i0; i <= i1; i++) { const v = c.a(i); if (!Number.isFinite(v)) { first = true; continue; } const x = X(i + T0), y = Y(sg * (v - m) / sd); first ? g.moveTo(x, y) : g.lineTo(x, y); first = false; }
+    g.stroke(); g.setLineDash([]);
+    for (let i = i0; i <= i1; i++) { const v = c.a(i); if (Number.isFinite(v)) { tags.push({ y: Y(sg * (v - m) / sd), x: X(i + T0), t: c.name, col }); break; } }
+  });
+  g.restore();
+  // name each line at its right-hand end (stacked so the names do not overlap)
+  tags.sort((a, b) => a.y - b.y); for (let k = 1; k < tags.length; k++) tags[k].y = Math.max(tags[k].y, tags[k - 1].y + 15);
+  g.font = "600 12px " + css("--font-ui"); g.textAlign = "right";
+  g.textAlign = "left";
+  tags.forEach((tg) => { const y = Math.min(Math.max(tg.y, T + 8), T + ph - 8), x = L + pw + 8;
+    g.strokeStyle = tg.col; g.lineWidth = 2.5; g.beginPath(); g.moveTo(x, y); g.lineTo(x + 14, y); g.stroke();
+    g.fillStyle = C.ink; g.fillText(tg.t, x + 19, y); });
+  g.font = "12px " + css("--font-ui");
+  if (!starred.length) { g.fillStyle = C.muted; g.textAlign = "center"; g.fillText("Click ☆ on charts in Part 2 to add records here.", L + pw / 2, T + ph / 2); }
+  const yb = T + ph;
+  if (t0 < 0) { const xa = X(0), xb = X(Math.max(t0, T0)); g.fillStyle = "rgba(17,20,23,0.05)"; g.fillRect(xa, T, xb - xa, ph); }
+  g.fillStyle = C.ink; const [step, labStep] = span > 1500 ? [250, 500] : span > 700 ? [100, 200] : span > 300 ? [50, 100] : span > 120 ? [10, 50] : [5, 10];
+  for (let t = Math.ceil(t0 / step) * step; t <= t1; t += step) { const x = X(t); g.strokeStyle = C.rule; g.beginPath(); g.moveTo(x, yb); g.lineTo(x, yb + 4); g.stroke();
+    g.textAlign = x > L + pw - 20 ? "right" : x < L + 20 ? "left" : "center";
+    if (t % labStep === 0) g.fillText(span > 1500 ? (t === 0 ? "today" : (t / 1000).toFixed(1) + " Ma") : t === 0 ? "today" : t < 0 ? String(-t) : t.toLocaleString(), x, yb + 14); }
+  axisTitle(g, X, L, pw, t0, t1, span, h - 8);
+  if (st.t >= t0 && st.t <= t1) { const xc = X(st.t); g.strokeStyle = C.ink; g.lineWidth = 1.5; g.beginPath(); g.moveTo(xc, T); g.lineTo(xc, yb); g.stroke(); }
+  document.querySelectorAll(".zLab2").forEach((e) => e.textContent = el("zLab").textContent);
+}
+let cmpDrag = false, cmpGeom = { L: 58, pw: 1 };
+const pickCmp = (ev) => { const r = el("cmp").getBoundingClientRect(), x = ev.clientX - r.left; setDate(Math.max(win[0], Math.min(win[1], win[1] - (x - cmpGeom.L) / cmpGeom.pw * (win[1] - win[0])))); };
+el("cmp").addEventListener("pointerdown", (ev) => { cmpDrag = true; try { el("cmp").setPointerCapture(ev.pointerId); } catch (e) {} pickCmp(ev); });
+el("cmp").addEventListener("pointermove", (ev) => { if (cmpDrag) pickCmp(ev); });
+el("cmp").addEventListener("pointerup", () => { cmpDrag = false; });
+el("cmp").addEventListener("wheel", (ev) => { if (!ev.ctrlKey && !ev.metaKey) return; ev.preventDefault();
+  const r = el("cmp").getBoundingClientRect(), t = win[1] - (ev.clientX - r.left - cmpGeom.L) / cmpGeom.pw * (win[1] - win[0]);
+  zoomBy(Math.exp(ev.deltaY * 0.01), Math.max(win[0], Math.min(win[1], t))); }, { passive: false });
+// ---------- Part 4: one record against another ----------
+const sx = el("sx"), sy = el("sy");
+CMP.forEach((c) => { sx.add(new Option(c.name, c.id)); sy.add(new Option(c.name, c.id)); });
+sx.value = "dust"; sy.value = "co2";
+[sx, sy, el("lag"), el("flipX"), el("flipY")].forEach((e) => e.addEventListener("input", drawXY));
+const niceTicks = (lo, hi, n = 5) => { const raw = (hi - lo) / n, p = 10 ** Math.floor(Math.log10(raw)), st = [1, 2, 2.5, 5, 10].map((m) => m * p).find((m) => m >= raw);
+  const out = []; for (let v = Math.ceil(lo / st) * st; v <= hi + 1e-9; v += st) out.push(+v.toPrecision(10)); return { out, st }; };
+const fmtTick = (v, st) => { const d = Math.max(0, -Math.floor(Math.log10(st) + 1e-9)); return v.toFixed(Math.min(4, d)); };
+function pairs(cx, cy, lag, i0, i1) { const P = []; for (let i = i0; i <= i1; i++) { const j = i - lag; if (j < 0 || j >= N) continue; const x = cx.a(i), y = cy.a(j); if (Number.isFinite(x) && Number.isFinite(y)) P.push([x, y, i + T0]); } return P; }
+function corr(P) { const n = P.length; if (n < 5) return NaN; let mx = 0, my = 0; P.forEach(([x, y]) => { mx += x; my += y; }); mx /= n; my /= n;
+  let sxy = 0, sxx = 0, syy = 0; P.forEach(([x, y]) => { sxy += (x - mx) * (y - my); sxx += (x - mx) ** 2; syy += (y - my) ** 2; }); return sxy / Math.sqrt(sxx * syy); }
+let xyPts = [];
+// the two records through the time window, each rescaled; Y drawn shifted by the time shift so matching wiggles line up
+function drawXYT(cx, cy, lag, wi0, wi1) {
+  // a 300,000-year snapshot around the selected date, limited to the time window and to years where both records have data
+  let d0 = Infinity, d1 = -Infinity;
+  for (let i = wi0; i <= wi1; i++) { const j = i - lag; if (j < 0 || j >= N) continue; if (Number.isFinite(cx.a(i)) && Number.isFinite(cy.a(j))) { d0 = Math.min(d0, i + T0); d1 = Math.max(d1, i + T0); } }
+  if (!(d1 > d0)) { d0 = win[0]; d1 = win[1]; }
+  const SNAP = 300, half = Math.min(SNAP, d1 - d0) / 2, c = Math.max(d0 + half, Math.min(d1 - half, st.t));
+  const t0 = c - half, t1 = c + half, span = t1 - t0, i0 = Math.max(0, Math.floor(t0) - T0), i1 = Math.min(N - 1, Math.ceil(t1) - T0);
+  const [g, w, h] = prep(el("xyt")), L = 44, Rm = 12, T = 30, B = 36, pw = w - L - Rm, ph = h - T - B;
+  const X = (t) => L + (t1 - t) / span * pw, Y = (v) => T + ph - (Math.max(-3, Math.min(3, v)) + 3) / 6 * ph;
+  g.fillStyle = C.panel; g.fillRect(L, T, pw, ph);
+  g.strokeStyle = C.rule; g.lineWidth = 1; g.fillStyle = C.muted; g.textAlign = "right";
+  [-2, 0, 2].forEach((v) => { g.beginPath(); g.moveTo(L, Y(v)); g.lineTo(L + pw, Y(v)); g.stroke(); g.fillText(v === 0 ? "avg" : (v > 0 ? "+" : "−") + Math.abs(v), L - 5, Y(v)); });
+  const colX = cmpCol(cx.id), colY0 = cmpCol(cy.id), colY = colY0 === colX ? SPARE[0] : colY0;
+  el("flipXn").textContent = cx.name; el("flipYn").textContent = cy.name;
+  const draw = (c, shift, col, sg) => {
+    const vals = []; for (let i = i0; i <= i1; i++) { const j = i - shift; if (j >= 0 && j < N && Number.isFinite(c.a(j))) vals.push(c.a(j)); }
+    if (vals.length < 3) return;
+    const m = vals.reduce((p, q) => p + q, 0) / vals.length, sd = Math.sqrt(vals.reduce((p, q) => p + (q - m) ** 2, 0) / vals.length) || 1;
+    g.strokeStyle = col; g.lineWidth = span > 1500 ? 1 : 1.6; g.beginPath(); let first = true;
+    for (let i = i0; i <= i1; i++) { const j = i - shift, v = j >= 0 && j < N ? c.a(j) : NaN; if (!Number.isFinite(v)) { first = true; continue; } const x = X(i + T0), y = Y(sg * (v - m) / sd); first ? g.moveTo(x, y) : g.lineTo(x, y); first = false; }
+    g.stroke();
+  };
+  g.save(); g.beginPath(); g.rect(L, T, pw, ph); g.clip(); draw(cx, 0, colX, el("flipX").checked ? -1 : 1); draw(cy, lag, colY, el("flipY").checked ? -1 : 1);
+  const xc = X(st.t); g.strokeStyle = C.ink; g.lineWidth = 1.2; g.beginPath(); g.moveTo(xc, T); g.lineTo(xc, T + ph); g.stroke(); g.restore();
+  // key
+  g.font = "12px " + css("--font-ui"); g.textAlign = "left"; let kx = L;
+  [[colX, `${cx.name} (X)` + (el("flipX").checked ? ", flipped" : "")], [colY, `${cy.name} (Y)` + (el("flipY").checked ? ", flipped" : "") + (lag ? `, moved ${Math.abs(lag)} kyr ${lag > 0 ? "back in time" : "forward in time"}` : "")]].forEach(([c, t]) => {
+    g.strokeStyle = c; g.lineWidth = 2.5; g.beginPath(); g.moveTo(kx, 12); g.lineTo(kx + 16, 12); g.stroke(); g.fillStyle = C.ink; g.fillText(t, kx + 21, 12); kx += g.measureText(t).width + 40; });
+  // x axis
+  const yb = T + ph; g.fillStyle = C.ink; const [step, labStep] = span > 1500 ? [250, 1000] : span > 700 ? [100, 200] : span > 300 ? [50, 100] : span > 120 ? [25, 50] : [5, 10];
+  for (let t = Math.ceil(t0 / step) * step; t <= t1; t += step) { const x = X(t); g.strokeStyle = C.rule; g.beginPath(); g.moveTo(x, yb); g.lineTo(x, yb + 4); g.stroke();
+    g.textAlign = x > L + pw - 20 ? "right" : x < L + 20 ? "left" : "center";
+    if (t % labStep === 0) g.fillText(span > 1500 ? (t === 0 ? "today" : (t / 1000).toFixed(1) + " Ma") : t === 0 ? "today" : t < 0 ? String(-t) : t.toLocaleString(), x, yb + 14); }
+  axisTitle(g, X, L, pw, t0, t1, span, h - 6);
+}
+function drawXY() {
+  const [g, w, h] = prep(el("xy")), cx = CMP.find((c) => c.id === sx.value), cy = CMP.find((c) => c.id === sy.value), lag = +el("lag").value;
+  const yrs = (Math.abs(lag) * 1000).toLocaleString();
+  el("lagV").textContent = lag === 0 ? `Compare ${cx.name} and ${cy.name} at the same time.`
+    : `Compare ${cx.name} at time T to ${cy.name} at time T ${lag > 0 ? "+" : "−"} ${yrs} years (${yrs} years ${lag > 0 ? "later" : "earlier"}).`;
+  const i0 = Math.max(0, Math.floor(win[0]) - T0), i1 = Math.min(N - 1, Math.ceil(win[1]) - T0), P = pairs(cx, cy, lag, i0, i1);
+  const L = 70, R = 14, T = 34, B = 52, pw = w - L - R, ph = h - T - B;
+  g.fillStyle = C.panel; g.fillRect(L, T, pw, ph);
+  if (P.length < 5) { g.fillStyle = C.muted; g.textAlign = "center"; g.fillText("These two records do not overlap in this time window.", L + pw / 2, T + ph / 2); el("xyStats").innerHTML = ""; xyPts = []; drawXYT(cx, cy, lag, i0, i1); return; }
+  let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity; P.forEach(([x, y]) => { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); });
+  const px = (x1 - x0) * 0.05 || 1, py = (y1 - y0) * 0.05 || 1; x0 -= px; x1 += px; y0 -= py; y1 += py;
+  const X = (v) => L + (v - x0) / (x1 - x0) * pw, Y = (v) => T + ph - (v - y0) / (y1 - y0) * ph;
+  // grid + ticks
+  g.strokeStyle = C.rule; g.lineWidth = 1; g.fillStyle = C.muted;
+  const tx = niceTicks(x0, x1), ty = niceTicks(y0, y1);
+  g.textAlign = "center"; tx.out.forEach((v) => { g.beginPath(); g.moveTo(X(v), T); g.lineTo(X(v), T + ph); g.stroke(); g.fillText(fmtTick(v, tx.st), X(v), T + ph + 13); });
+  g.textAlign = "right"; ty.out.forEach((v) => { g.beginPath(); g.moveTo(L, Y(v)); g.lineTo(L + pw, Y(v)); g.stroke(); g.fillText(fmtTick(v, ty.st), L - 6, Y(v)); });
+  g.fillStyle = C.ink; g.textAlign = "center"; g.fillText(cx.name + (cx.unit ? ` (${cx.unit})` : ""), L + pw / 2, h - 14);
+  g.save(); g.translate(16, T + ph / 2); g.rotate(-Math.PI / 2); g.fillText(cy.name + (cy.unit ? ` (${cy.unit})` : "") + (lag ? `, ${Math.abs(lag)} kyr ${lag > 0 ? "later" : "earlier"}` : ""), 0, 0); g.restore();
+  // points: shaded from old (light) to young (dark)
+  const tMin = P.reduce((m, p) => Math.min(m, p[2]), Infinity), tMax = P.reduce((m, p) => Math.max(m, p[2]), -Infinity);
+  const shade = (t) => { const f = tMax > tMin ? (t - tMin) / (tMax - tMin) : 0; const a = [22, 50, 92], b = [180, 196, 214]; return `rgb(${a.map((c, k) => Math.round(c + f * (b[k] - c)))})`; };
+  const step = P.length > 1500 ? 2 : 1; xyPts = [];
+  P.slice().sort((p, q) => q[2] - p[2]).forEach(([x, y, t], k) => { if (k % step) return; g.fillStyle = shade(t); g.beginPath(); g.arc(X(x), Y(y), 2.2, 0, 7); g.fill(); xyPts.push([X(x), Y(y), t]); });
+  // selected date
+  // age key
+  { g.font = "11px " + css("--font-ui"); g.textAlign = "left"; g.textBaseline = "middle"; let kx = L; const ky = 14;
+    g.fillStyle = C.muted; g.fillText("point age:", kx, ky); kx += g.measureText("point age:").width + 8;
+    g.fillStyle = C.ink; g.fillText(fmtT(tMax), kx, ky); kx += g.measureText(fmtT(tMax)).width + 6;
+    for (let i = 0; i < 100; i++) { g.fillStyle = shade(tMax - (tMax - tMin) * i / 99); g.fillRect(kx + i, ky - 4, 1.2, 8); } kx += 106;
+    g.fillStyle = C.ink; g.fillText(fmtT(tMin), kx, ky); g.font = "12px " + css("--font-ui"); }
+  // statistics
+  el("xyStats").innerHTML = `<div>Correlation r: <span class="big">${corr(P).toFixed(2)}</span> <span class="muted">(${fmtT(tMax)} to ${fmtT(tMin)})</span></div>`;
+  drawXYT(cx, cy, lag, i0, i1);
+}
+el("xy").addEventListener("pointerdown", (ev) => { const r = el("xy").getBoundingClientRect(), x = ev.clientX - r.left, y = ev.clientY - r.top;
+  let best = null, bd = 144; xyPts.forEach(([px, py, t]) => { const d = (px - x) ** 2 + (py - y) ** 2; if (d < bd) { bd = d; best = t; } }); if (best != null) setDate(best); });
+function pickTime(ev) {
+  const r = el("time").getBoundingClientRect(), x = ev.clientX - r.left, [t0, t1] = win;
+  setDate(Math.max(t0, Math.min(t1, t1 - (x - tGeom.L) / tGeom.pw * (t1 - t0))));
+}
+let dragging = false;
+el("time").addEventListener("pointerdown", (ev) => { dragging = true; try { el("time").setPointerCapture(ev.pointerId); } catch (e) {} pickTime(ev); });
+el("time").addEventListener("pointermove", (ev) => { if (dragging) pickTime(ev); });
+el("time").addEventListener("pointerup", () => { dragging = false; Object.assign(st, orbitAt(st.t)); setControls(); drawExplorer(); });
+
+// keep the selected date inside the shown window (switch zoom window if needed)
+function ensureWin() {
+  if (st.t >= win[0] && st.t <= win[1]) return;
+  const sp = win[1] - win[0]; setWin(st.t - sp / 2, st.t + sp / 2);
+}
+function setDate(t) {
+  st.t = Math.max(T0, Math.min(TMAX, t)); ensureWin();
+  Object.assign(st, orbitAt(st.t)); setControls(); drawTime(); drawExplorer();
+}
+el("tYears").addEventListener("change", () => { const y = parseFloat(el("tYears").value); if (Number.isFinite(y)) setDate(-y / 1000); });
+el("tYears").addEventListener("keydown", (ev) => { if (ev.key === "Enter") el("tYears").dispatchEvent(new Event("change")); });
+el("btnBack").addEventListener("click", () => setDate(Math.round(st.t) + 1));
+el("btnFwd").addEventListener("click", () => setDate(Math.round(st.t) - 1));
+let playing = false, last = 0;
+const stopPlay = () => { playing = false; el("btnPlay").textContent = "Play"; };
+el("btnPlay").addEventListener("click", () => {
+  if (playing) return stopPlay();
+  playing = true; el("btnPlay").textContent = "Pause";
+  if (st.t <= win[0] + 1) st.t = win[1];
+  last = performance.now(); requestAnimationFrame(step);
+});
+function step(now) {
+  if (!playing) return;
+  const dt = Math.min(0.1, (now - last) / 1000); last = now;
+  st.t = Math.max(win[0], st.t - dt * +el("speed").value);   // thousand years per second
+  Object.assign(st, orbitAt(st.t)); setControls(); drawTime(); drawExplorer();
+  if (st.t <= win[0]) return stopPlay();
+  requestAnimationFrame(step);
+}
+
+setControls(); drawExplorer(); drawTime();
+let rt, lastW = 0;
+const ro = new ResizeObserver(() => { const w = el("time").parentElement.clientWidth; if (w === lastW) return; lastW = w;
+  clearTimeout(rt); rt = setTimeout(() => { drawExplorer(); drawTime(); }, 100); });
+ro.observe(document.querySelector(".wrap"));
+document.fonts && document.fonts.ready.then(() => { drawExplorer(); drawTime(); });
+})();
+</script>
+
+</html>
