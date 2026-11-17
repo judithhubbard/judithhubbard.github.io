@@ -174,7 +174,7 @@ canvas { display: block; }
       </div>
       <div class="fig">
         <h3>Sunlight at 65°N through the year (W/m²)</h3>
-        <div class="cbox" style="height:330px"><canvas id="line65" title="Daily average at the top of the atmosphere. Dashed lines: solstices and equinoxes (March equinox fixed at March 20)." aria-label="Sunlight at 65 degrees north through the year"></canvas></div>
+        <div class="cbox" style="height:330px"><canvas id="line65" aria-label="Sunlight at 65 degrees north through the year"></canvas></div>
       </div>
       <div class="fig">
         <h3>Sunlight by latitude through the year (W/m²)</h3>
@@ -453,15 +453,35 @@ function drawLine65() {
     g.fillStyle = C.muted; g.fillText(t, lx, T + ph - 16);
   });
   g.font = "12px " + css("--font-ui");
-  plot(q65Year(TODAY.e, TODAY.w, TODAY.o), "#9aa1a8", 2);
-  plot(q65Year(st.e, st.w, st.o), C.accent, 2);
+  const qT = q65Year(TODAY.e, TODAY.w, TODAY.o), qS = q65Year(st.e, st.w, st.o);
+  plot(qT, "#9aa1a8", 2);
+  plot(qS, C.accent, 2);
+  l65Geom = { L, pw };
   g.font = "12.5px " + css("--font-ui"); g.textAlign = "left";
   g.strokeStyle = C.accent; g.lineWidth = 2; g.beginPath(); g.moveTo(L + 10, T + 8); g.lineTo(L + 30, T + 8); g.stroke();
   const yr = (e, w, o) => summerEnergy(e, w, o, 65, -1).toFixed(2);   // all days: yearly total
   g.fillStyle = C.ink; g.fillText(`your settings: ${yr(st.e, st.w, st.o)} GJ/m² per year`, L + 36, T + 8);
   g.strokeStyle = "#9aa1a8"; g.beginPath(); g.moveTo(L + 10, T + 26); g.lineTo(L + 30, T + 26); g.stroke();
   g.fillText(`today: ${yr(TODAY.e, TODAY.w, TODAY.o)} GJ/m² per year`, L + 36, T + 26);
+  if (hov65 != null) {   // hover: date + values
+    const d = hov65, at = (arr) => { const k = d / 2, i = Math.min(arr.length - 2, Math.floor(k)); return arr[i] + (arr[i + 1] - arr[i]) * (k - i); };
+    const x = X(d), vS = at(qS), vT = at(qT);
+    g.strokeStyle = C.ink; g.lineWidth = 1; g.beginPath(); g.moveTo(x, T); g.lineTo(x, T + ph); g.stroke();
+    [[vT, "#9aa1a8"], [vS, C.accent]].forEach(([v, c]) => { g.fillStyle = c; g.strokeStyle = "#fff"; g.lineWidth = 2; g.beginPath(); g.arc(x, Y(v), 4.5, 0, 7); g.fill(); g.stroke(); });
+    const lines = [`${dateStr(d)} (day ${Math.floor(d) + 1})`, `your settings: ${vS.toFixed(0)} W/m²`, `today: ${vT.toFixed(0)} W/m²`];
+    g.font = "12px " + css("--font-ui"); const bw = Math.max(...lines.map((t) => g.measureText(t).width)) + 14, bh = 54;
+    const bx = x + 10 + bw > L + pw ? x - 10 - bw : x + 10, by = T + 44;
+    g.fillStyle = "rgba(255,255,255,0.95)"; g.strokeStyle = C.rule; g.lineWidth = 1; g.fillRect(bx, by, bw, bh); g.strokeRect(bx, by, bw, bh);
+    g.textAlign = "left"; g.fillStyle = C.ink; g.font = "600 12px " + css("--font-ui"); g.fillText(lines[0], bx + 7, by + 13);
+    g.font = "12px " + css("--font-ui"); g.fillStyle = C.accent; g.fillText(lines[1], bx + 7, by + 29); g.fillStyle = "#6b7178"; g.fillText(lines[2], bx + 7, by + 45);
+  }
 }
+var hov65 = null, l65Geom = null;
+el("line65").addEventListener("pointermove", (ev) => {
+  if (!l65Geom) return; const r = el("line65").getBoundingClientRect(), d = (ev.clientX - r.left - l65Geom.L) / l65Geom.pw * 365;
+  hov65 = d < 0 || d >= 365 ? null : d; drawLine65();
+});
+el("line65").addEventListener("pointerleave", () => { hov65 = null; drawLine65(); });
 
 function drawReadout() {
   const qs = dailyQ(65, 90, st.e, st.w, st.o), q0 = dailyQ(65, 90, TODAY.e, TODAY.w, TODAY.o);
