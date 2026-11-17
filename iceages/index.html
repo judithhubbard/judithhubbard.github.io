@@ -55,8 +55,8 @@ canvas { display: block; }
 .readout dd { margin: 0; font-family: var(--font-num); font-variant-numeric: tabular-nums; text-align: right; }
 .timebar { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; margin-bottom: 8px; font-size: 14px; }
 .timebar .now { font-family: var(--font-num); font-size: 15px; }
-.player { position: sticky; top: 0; z-index: 10; background: var(--bg); border-bottom: 1px solid var(--rule); padding: 8px 0 10px; margin-bottom: 4px;
-  display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px 16px; align-items: center; font-size: 13.5px; }
+.player { position: sticky; top: 0; z-index: 10; background: var(--bg); border-bottom: 1px solid var(--rule); padding: 5px 0 4px; margin-bottom: 4px;
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: 3px 16px; align-items: center; font-size: 13.5px; }
 .player .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .player .now { font-family: var(--font-num); font-size: 14px; min-width: 22ch; }
 .xyctl { flex-wrap: nowrap; font-size: 13.5px; gap: 10px 14px; }
@@ -89,7 +89,8 @@ canvas { display: block; }
 #trackBtns .drop { position: absolute; left: 0; right: 0; height: 3px; background: var(--ink); border-radius: 2px; display: none; }
 .player .sep { width: 1px; align-self: stretch; background: var(--rule); margin: 0 4px; }
 .player .ends { display: flex; justify-content: space-between; color: var(--muted); font-size: 11.5px; }
-.player button { padding: 4px 10px; }
+.player button { padding: 2px 9px; }
+.player select, .player input { padding: 1px 4px !important; }
 @media (max-width: 640px) { .player { grid-template-columns: minmax(0, 1fr); } }
 .sources { font-size: 12.5px; color: var(--muted); margin-top: 28px; border-top: 1px solid var(--rule); padding-top: 12px; }
 .sources p { margin: 0 0 4px; }
@@ -115,9 +116,9 @@ canvas { display: block; }
       <button class="zAll" type="button">Show all</button>
       <span class="now" id="zLab" style="min-width:0"></span>
     </div>
-    <div class="cbox" style="height:58px"><canvas id="overview" aria-label="Whole record: click to choose a date; the gray box is the time window shown on the charts" style="touch-action:none"></canvas></div>
-    <div class="ends" style="padding-left:58px">▼ = date (click or drag). Gray box = time window for the charts (drag to move, drag its edges to resize).</div>
+    <div class="cbox" style="height:34px"><canvas id="overview" title="Ice volume, whole record. ▼ = date (click or drag). Gray box = time window (drag to move, drag its edges to resize)." aria-label="Whole record: click to choose a date; the gray box is the time window shown on the charts" style="touch-action:none"></canvas></div>
   </div>
+  <div class="ends" style="padding-left:48px;color:var(--muted);font-size:11.5px;margin-bottom:6px">Strip above: ice volume, whole record. ▼ = date (click or drag). Gray box = time window for the charts (drag to move, drag its edges to resize).</div>
 
   <section>
     <h2>1. Orbital cycles and energy</h2>
@@ -147,7 +148,7 @@ canvas { display: block; }
       </div>
       <div class="fig">
         <h3>Earth’s orbit, seen from above the North Pole</h3>
-        <div class="cbox" style="height:400px"><canvas id="orbit" aria-label="Diagram of Earth's orbit"></canvas></div>
+        <div class="cbox" style="height:340px"><canvas id="orbit" aria-label="Diagram of Earth's orbit"></canvas></div>
         <div class="cap">Shaded halves: northern spring + summer and fall + winter. The larger area takes longer (Kepler’s second law).</div>
         <div class="cbox" style="height:74px;margin-top:12px"><canvas id="seasons" aria-label="Length of each northern season in days"></canvas></div>
         <div class="cap">Northern-hemisphere season lengths.</div>
@@ -601,7 +602,7 @@ el("time").addEventListener("wheel", (ev) => { if (!ev.ctrlKey && !ev.metaKey) r
 // overview strip: whole record, with the zoom window as a draggable box
 let ovGeom = null, ovDrag = null;
 function drawOverview() {
-  const [g, w, h] = prep(el("overview")), L = 58, Rm = 12, pw = w - L - Rm, T = 11, H = h - 25;
+  const [g, w, h] = prep(el("overview")), L = 48, Rm = 56, pw = w - L - Rm, T = 9, H = h - T - 1;
   const X = (t) => L + (TMAX - t) / (TMAX - T0) * pw; ovGeom = { L, pw, X };
   g.fillStyle = C.panel; g.fillRect(L, T, pw, H);
   g.strokeStyle = COL.ice; g.lineWidth = 0.8; g.beginPath();
@@ -612,8 +613,8 @@ function drawOverview() {
   g.fillStyle = C.ink; [xa, xb].forEach((x) => g.fillRect(x - 3, T + 3, 6, H - 6));
   const xc = X(st.t); g.strokeStyle = C.ink; g.lineWidth = 2; g.beginPath(); g.moveTo(xc, T); g.lineTo(xc, T + H); g.stroke();
   g.fillStyle = C.ink; g.beginPath(); g.moveTo(xc - 6, 1); g.lineTo(xc + 6, 1); g.lineTo(xc, T); g.closePath(); g.fill();
-  g.fillStyle = C.muted; g.font = "11px " + css("--font-ui"); g.textAlign = "left"; g.fillText("3 Ma", L, h - 7); g.textAlign = "right"; g.fillText("+100 kyr", L + pw, h - 7);
-  g.textAlign = "center"; g.fillText("ice volume, whole record", L + pw / 2, h - 7); g.font = "12px " + css("--font-ui");
+  g.fillStyle = C.muted; g.font = "11px " + css("--font-ui"); g.textBaseline = "middle"; g.textAlign = "right"; g.fillText("3 Ma", L - 5, T + H / 2); g.textAlign = "left"; g.fillText("+100 kyr", L + pw + 5, T + H / 2);
+  g.textBaseline = "alphabetic"; g.font = "12px " + css("--font-ui");
   const sp = win[1] - win[0];
   el("zLab").textContent = sp >= TMAX - T0 - 1 ? "all" : `${fmtT(win[1])} – ${fmtT(win[0])}`;
 }
