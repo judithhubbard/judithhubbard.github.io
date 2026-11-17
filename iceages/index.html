@@ -33,6 +33,12 @@ section { border-top: 2px solid var(--ink); padding-top: 14px; margin-top: 26px;
 .grid { display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 28px; align-items: start; }
 .grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px; margin-top: 22px; }
 @media (max-width: 760px) { .grid, .grid2 { grid-template-columns: minmax(0, 1fr); } }
+.p1top { display: grid; gap: 14px 32px; align-items: start; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); max-width: 900px; }
+.p1figs { display: grid; gap: 14px 24px; align-items: start; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 18px; }
+@media (max-width: 900px) { .p1figs { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+@media (max-width: 640px) { .p1top, .p1figs { grid-template-columns: minmax(0, 1fr); } }
+.p1top .controls { gap: 10px; }
+.p1top .readout { max-width: 380px; font-size: 12.5px; gap: 1px 12px; padding: 7px 10px; }
 .cbox { position: relative; width: 100%; overflow: hidden; }
 .cbox canvas { position: absolute; left: 0; top: 0; }
 h3 { font-size: 14.5px; font-weight: 600; margin: 0 0 6px; }
@@ -57,7 +63,7 @@ canvas { display: block; }
 .timebar .now { font-family: var(--font-num); font-size: 15px; }
 .player { position: sticky; top: 0; z-index: 10; background: var(--bg); border-bottom: 1px solid var(--rule); padding: 5px 0 4px; margin-bottom: 4px;
   display: grid; grid-template-columns: minmax(0, 1fr); gap: 3px 16px; align-items: center; font-size: 13.5px; }
-.player .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.player .row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .player .now { font-family: var(--font-num); font-size: 14px; min-width: 22ch; }
 .xyctl { flex-wrap: nowrap; font-size: 13.5px; gap: 10px 14px; }
 .xyctl select { max-width: 170px; }
@@ -87,7 +93,7 @@ canvas { display: block; }
 #trackBtns .grip:hover::before { border-color: var(--ink); }
 #trackBtns .grip.dragging { cursor: grabbing; color: var(--ink); }
 #trackBtns .drop { position: absolute; left: 0; right: 0; height: 3px; background: var(--ink); border-radius: 2px; display: none; }
-.player .sep { width: 1px; align-self: stretch; background: var(--rule); margin: 0 4px; }
+.player .sep { width: 1px; align-self: stretch; background: var(--rule); margin: 0 2px; }
 .player .ends { display: flex; justify-content: space-between; color: var(--muted); font-size: 11.5px; }
 .player button { padding: 2px 9px; }
 .player select, .player input { padding: 1px 4px !important; }
@@ -105,16 +111,16 @@ canvas { display: block; }
       <button id="btnPlay" type="button">Play</button>
       <button id="btnBack" type="button" title="1,000 years earlier">◀ 1 kyr</button>
       <button id="btnFwd" type="button" title="1,000 years later">1 kyr ▶</button>
-      <label>Speed <select id="speed"><option value="1">1,000 yr/s</option><option value="2">2,000 yr/s</option><option value="5" selected>5,000 yr/s</option><option value="10">10,000 yr/s</option><option value="40">40,000 yr/s</option></select></label>
+      <label>Speed <select id="speed"><option value="1">1 kyr/s</option><option value="2">2 kyr/s</option><option value="5" selected>5 kyr/s</option><option value="10">10 kyr/s</option><option value="40">40 kyr/s</option></select></label>
       <span class="sep"></span>
       <span id="tNow" hidden></span>
-      <label title="Years from today: + for the future, − for the past. Type a number and press Enter.">Date: <input id="tYears" type="number" step="1000" min="-3000000" max="100000" value="0" style="width:8.5em;font:inherit;font-family:var(--font-num);padding:3px 6px;border:1px solid var(--ink);border-radius:3px"> years from today</label>
+      <label title="Years from today: + for the future, − for the past. Type a number and press Enter.">Date: <input id="tYears" type="number" step="1000" min="-3000000" max="100000" value="0" style="width:5.5em;font:inherit;font-family:var(--font-num);padding:3px 6px;border:1px solid var(--ink);border-radius:3px"> years from today</label>
       <span class="sep"></span>
-      <span>Window:</span>
-      <button class="zIn" type="button" title="Zoom in">+</button>
-      <button class="zOut" type="button" title="Zoom out">−</button>
-      <button class="zAll" type="button">Show all</button>
-      <span class="now" id="zLab" style="min-width:0"></span>
+      <span>Charts:</span>
+      <span class="now" id="zLab" style="min-width:0;font-size:13px"></span>
+      <button class="zIn" type="button" title="Show a shorter time span (gray box narrower)">Zoom in</button>
+      <button class="zOut" type="button" title="Show a longer time span (gray box wider)">Zoom out</button>
+      <button class="zAll" type="button" title="Show the whole record">All</button>
     </div>
     <div class="cbox" style="height:34px"><canvas id="overview" title="Ice volume, whole record. ▼ = date (click or drag). Gray box = time window (drag to move, drag its edges to resize)." aria-label="Whole record: click to choose a date; the gray box is the time window shown on the charts" style="touch-action:none"></canvas></div>
   </div>
@@ -122,7 +128,8 @@ canvas { display: block; }
 
   <section>
     <h2>1. Orbital cycles and energy</h2>
-    <div class="grid">
+    <div class="p1">
+      <div class="p1top">
       <div class="controls">
         <div class="ctl">
           <label for="ecc">Eccentricity (orbit shape) <span class="val" id="eccV"></span></label>
@@ -144,27 +151,24 @@ canvas { display: block; }
           <button id="btnSel" type="button">Set to the date in the top bar</button>
         </div>
         <label class="check"><input id="exag" type="checkbox" checked> Exaggerate orbit shape ×8 in the diagram</label>
-        <dl class="readout" id="readout"></dl>
       </div>
-      <div class="fig">
-        <h3>Earth’s orbit, seen from above the North Pole</h3>
-        <div class="cbox" style="height:340px"><canvas id="orbit" aria-label="Diagram of Earth's orbit"></canvas></div>
-        <div class="cap">Shaded halves: northern spring + summer and fall + winter. The larger area takes longer (Kepler’s second law).</div>
-        <div class="cbox" style="height:74px;margin-top:12px"><canvas id="seasons" aria-label="Length of each northern season in days"></canvas></div>
-        <div class="cap">Northern-hemisphere season lengths.</div>
-      </div>
+      <dl class="readout" id="readout"></dl>
     </div>
-    <div class="grid2">
+    <div class="p1figs">
+      <div class="fig">
+        <h3>Earth’s orbit, viewed from above</h3>
+        <div class="cbox" style="height:330px"><canvas id="orbit" aria-label="Diagram of Earth's orbit"></canvas></div>
+        <div class="cbox" style="height:72px;margin-top:6px"><canvas id="seasons" aria-label="Length of each northern season in days"></canvas></div>
+        <div class="cap">Northern season lengths. The larger shaded half of the orbit takes longer (Kepler’s second law).</div>
+      </div>
       <div class="fig">
         <h3>Sunlight at 65°N through the year (W/m²)</h3>
-        <div class="cbox" style="height:300px"><canvas id="line65" aria-label="Sunlight at 65 degrees north through the year"></canvas></div>
-        <div class="cap">Daily average at the top of the atmosphere. Dashed lines: solstices and equinoxes (March equinox fixed at March 20).</div>
+        <div class="cbox" style="height:330px"><canvas id="line65" title="Daily average at the top of the atmosphere. Dashed lines: solstices and equinoxes (March equinox fixed at March 20)." aria-label="Sunlight at 65 degrees north through the year"></canvas></div>
       </div>
       <div class="fig">
-        <h3>Sunlight at every latitude through the year (W/m²)</h3>
-        <div id="heatTot" style="font-size:13px;margin:0 0 6px"></div>
-        <div class="cbox" style="height:300px"><canvas id="heat" aria-label="Daily sunlight by latitude and month"></canvas></div>
-        <div class="cap">Thin lines every 100 W/m²; white line: 65°N.</div>
+        <h3>Sunlight by latitude through the year (W/m²)</h3>
+        <div id="heatTot" style="font-size:12.5px;margin:0 0 4px"></div>
+        <div class="cbox" style="height:310px"><canvas id="heat" title="Thin lines every 100 W/m²; white line: 65°N." aria-label="Daily sunlight by latitude and month"></canvas></div>
       </div>
     </div>
   </section>
@@ -303,14 +307,17 @@ const SEAS = { warm: "#fbe6d6", cool: "#e2ebf5", cols: ["#f3cfb4", "#e9ac83", "#
 function seasonLengths(e, w) { const d = [0, 90, 180, 270, 360].map((l) => dayOf(l % 360, e, w)); return [0, 1, 2, 3].map((k) => (((d[k + 1] - d[k]) % YEAR) + YEAR) % YEAR || YEAR); }
 function drawSeasons() {
   const [g, w, h] = prep(el("seasons"));
-  const L = 92, Rm = 8, pw = w - L - Rm, rows = [["Your settings", seasonLengths(st.e, st.w)], ["Today", seasonLengths(TODAY.e, TODAY.w)]];
+  const L = w < 420 ? 80 : 92, Rm = 2, pw = w - L - Rm, rows = [["Your settings", seasonLengths(st.e, st.w)], ["Today", seasonLengths(TODAY.e, TODAY.w)]];
   rows.forEach(([name, lens], r) => {
     const y = 6 + r * 34; let x = L;
     g.fillStyle = C.ink; g.textAlign = "left"; g.font = (r ? "" : "600 ") + "12.5px " + css("--font-ui"); g.fillText(name, 0, y + 13);
     g.font = "12px " + css("--font-ui");
     lens.forEach((len, k) => {
       const ww = len / YEAR * pw; g.fillStyle = SEAS.cols[k]; g.fillRect(x, y, ww - 2, 26);
-      g.fillStyle = C.ink; g.textAlign = "center"; g.fillText(`${SEAS.names[k]} ${len.toFixed(1)} d`, x + ww / 2, y + 13); x += ww;
+      g.fillStyle = C.ink; g.textAlign = "center";
+      if (pw / 4 < 95) { g.font = "11px " + css("--font-ui"); g.fillText(SEAS.names[k], x + ww / 2, y + 8); g.fillText(`${len.toFixed(1)} d`, x + ww / 2, y + 19); }
+      else g.fillText(`${SEAS.names[k]} ${len.toFixed(1)} d`, x + ww / 2, y + 13);
+      x += ww;
     });
   });
 }
@@ -319,7 +326,7 @@ function drawOrbit() {
   const [g, w, h] = prep(el("orbit"));
   const eD = Math.min(0.9, st.e * (exag.checked ? 8 : 1));
   // centre the ellipse in the frame; the Sun sits at the focus, offset a·e toward perihelion
-  const a = Math.min(w * 0.30, h / 2 - 44), ox = w / 2, oy = h / 2 + 8;
+  const narrow = w < 520, top = narrow ? 60 : 0, a = Math.min(narrow ? w / 2 - 58 : w * 0.30, (h - top) / 2 - (narrow ? 30 : 44)), ox = w / 2, oy = top + (h - top) / 2 + (narrow ? 0 : 8);
   const cx = ox + a * eD * Math.cos(st.w * R), cy = oy - a * eD * Math.sin(st.w * R);
   const pos = (L) => { const r = a * (1 - eD * eD) / (1 + eD * Math.cos((L - st.w) * R)); return [cx + r * Math.cos(L * R), cy - r * Math.sin(L * R)]; };
   // season halves (Earth's longitude = Sun's longitude + 180): spring+summer = Earth 180..360
@@ -327,8 +334,8 @@ function drawOrbit() {
   half(180, SEAS.warm); half(0, SEAS.cool);
   const [e1x] = pos(0), [e2x] = pos(180), mx = (e1x + e2x) / 2;
   g.textAlign = "center"; g.fillStyle = C.ink; g.font = "600 12.5px " + css("--font-ui");
-  g.fillText(`fall + winter: ${(lens[2] + lens[3]).toFixed(1)} days`, mx, cy - 22);
-  g.fillText(`spring + summer: ${(lens[0] + lens[1]).toFixed(1)} days`, mx, cy + 22);
+  g.fillText(`${a < 130 ? "" : "fall + winter: "}${(lens[2] + lens[3]).toFixed(1)} days`, mx, cy - 22);
+  g.fillText(`${a < 130 ? "" : "spring + summer: "}${(lens[0] + lens[1]).toFixed(1)} days`, mx, cy + 22);
   g.font = "12px " + css("--font-ui");
   // orbit
   g.strokeStyle = C.ink; g.lineWidth = 1.2; g.beginPath();
@@ -358,7 +365,7 @@ function drawOrbit() {
   g.textAlign = "left"; g.fillStyle = C.muted;
   g.fillText(exag.checked ? "Shape exaggerated ×8" : "True shape", 6, h - 10);
   // tilt inset (side view at June solstice; Sun to the left)
-  const ix = 70, iy = 50, rr = 22, tilt = st.o * R;
+  const ix = 70, iy = w < 520 ? 40 : 50, rr = w < 520 ? 18 : 22, tilt = st.o * R;
   g.strokeStyle = C.warm; g.lineWidth = 1;
   [-12, 0, 12].forEach((dy) => { g.beginPath(); g.moveTo(8, iy + dy); g.lineTo(ix - rr - 6, iy + dy); g.stroke();
     g.beginPath(); g.moveTo(ix - rr - 6, iy + dy); g.lineTo(ix - rr - 11, iy + dy - 3); g.moveTo(ix - rr - 6, iy + dy); g.lineTo(ix - rr - 11, iy + dy + 3); g.stroke(); });
@@ -410,7 +417,7 @@ function drawHeat() {
   g.textAlign = "center";
   MONTHS.forEach((m, k) => g.fillText(m[0], L + (MSTART[k] + 15) / 365 * pw, T + ph + 13));
   // color key
-  const ky = T + ph + 28, kw = Math.min(260, pw);
+  const ky = T + ph + 28, kw = Math.min(260, pw - 50);
   for (let i = 0; i < kw; i++) { const c = ramp(i / kw * 600); g.fillStyle = `rgb(${c})`; g.fillRect(L + i, ky, 1.2, 10); }
   g.fillStyle = C.ink; g.textAlign = "center";
   [0, 200, 400, 600].forEach((v) => g.fillText(v, L + v / 600 * kw, ky + 20));
@@ -428,7 +435,7 @@ function drawLine65() {
   const plot = (arr, col, lw) => { g.strokeStyle = col; g.lineWidth = lw; g.beginPath(); arr.forEach((v, k) => { const x = X(k * 2), y = Y(v); k ? g.lineTo(x, y) : g.moveTo(x, y); }); g.stroke(); };
   // solstices and equinoxes for your settings
   g.font = "11.5px " + css("--font-ui"); g.textAlign = "center";
-  [[0, "Mar equinox"], [90, "Jun solstice"], [180, "Sep equinox"], [270, "Dec solstice"]].forEach(([lam, t]) => {
+  (pw < 520 ? [[0, "Mar eq."], [90, "Jun sol."], [180, "Sep eq."], [270, "Dec sol."]] : [[0, "Mar equinox"], [90, "Jun solstice"], [180, "Sep equinox"], [270, "Dec solstice"]]).forEach(([lam, t]) => {
     const x = X(dayOf(lam, st.e, st.w));
     g.strokeStyle = C.muted; g.lineWidth = 1; g.setLineDash([3, 3]); g.beginPath(); g.moveTo(x, T + 40); g.lineTo(x, T + ph - 26); g.moveTo(x, T + ph - 6); g.lineTo(x, T + ph); g.stroke(); g.setLineDash([]);
     const tw = g.measureText(t).width, lx = Math.min(L + pw - tw / 2, Math.max(L + tw / 2, x));
@@ -467,7 +474,7 @@ function drawReadout() {
 const earthYear = (e) => S0 * Math.PI * 6.371e6 ** 2 * YEAR * 86400 / Math.sqrt(1 - e * e) / 1e24;
 function drawHeatTot() {
   const a = earthYear(st.e), b = earthYear(TODAY.e);
-  el("heatTot").innerHTML = `Whole Earth, one year: <b>${a.toFixed(3)} × 10²⁴ J</b> (today ${b.toFixed(3)} × 10²⁴ J; change ${((a / b - 1) * 100).toFixed(2)}%)`;
+  el("heatTot").innerHTML = `Whole Earth, one year: <b>${a.toFixed(3)} × 10²⁴ J</b> (change from today ${((a / b - 1) * 100).toFixed(2)}%)`;
 }
 function drawExplorer() { drawHeatTot(); drawReadout(); drawOrbit(); drawSeasons(); drawHeat(); drawLine65(); }
 
@@ -616,7 +623,7 @@ function drawOverview() {
   g.fillStyle = C.muted; g.font = "11px " + css("--font-ui"); g.textBaseline = "middle"; g.textAlign = "right"; g.fillText("3 Ma", L - 5, T + H / 2); g.textAlign = "left"; g.fillText("+100 kyr", L + pw + 5, T + H / 2);
   g.textBaseline = "alphabetic"; g.font = "12px " + css("--font-ui");
   const sp = win[1] - win[0];
-  el("zLab").textContent = sp >= TMAX - T0 - 1 ? "all" : `${fmtT(win[1])} – ${fmtT(win[0])}`;
+  el("zLab").textContent = sp >= TMAX - T0 - 1 ? "3 Ma – +100 kyr" : `${fmtT(win[1])} – ${fmtT(win[0])}`;
 }
 const fmtT = (t) => { t = Math.round(t); return t === 0 ? "today" : t > 0 ? (t >= 1000 ? (t / 1000).toFixed(2).replace(/0$/, "") + " Ma" : t + " ka") : "+" + (-t) + " kyr"; };
 const ovT = (ev) => { const r = el("overview").getBoundingClientRect(); return TMAX - (ev.clientX - r.left - ovGeom.L) / ovGeom.pw * (TMAX - T0); };
