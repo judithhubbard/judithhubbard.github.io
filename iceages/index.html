@@ -33,12 +33,24 @@ section { border-top: 2px solid var(--ink); padding-top: 14px; margin-top: 26px;
 .grid { display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 28px; align-items: start; }
 .grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 28px; margin-top: 22px; }
 @media (max-width: 760px) { .grid, .grid2 { grid-template-columns: minmax(0, 1fr); } }
-.p1top { display: grid; gap: 14px 32px; align-items: start; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); max-width: 900px; }
+.p1top { display: grid; gap: 12px 28px; align-items: start; grid-template-columns: minmax(0, 330px) auto minmax(0, 260px); }
 .p1figs { display: grid; gap: 14px 24px; align-items: start; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 18px; }
 @media (max-width: 900px) { .p1figs { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
 @media (max-width: 640px) { .p1top, .p1figs { grid-template-columns: minmax(0, 1fr); } }
 .p1top .controls { gap: 10px; }
-.p1top .readout { max-width: 380px; font-size: 12.5px; gap: 1px 12px; padding: 7px 10px; }
+.p1top .controls { gap: 8px; }
+.p1top .ctl .hint { margin-top: 0; font-size: 12px; }
+.p1top .readout { display: block; font-size: 13px; padding: 6px 10px; }
+.readout table { border-collapse: collapse; }
+.readout th, .readout td { padding: 2px 0 2px 10px; white-space: nowrap; }
+.readout tbody th { text-align: left; font-weight: 400; color: var(--muted); padding-left: 0; padding-right: 8px; }
+.readout thead th { font-weight: 500; font-size: 12px; color: var(--muted); text-align: right; }
+.readout td { font-family: var(--font-num); font-variant-numeric: tabular-nums; text-align: right; }
+.readout td.u { text-align: left; padding-left: 4px; color: var(--muted); }
+.p1btns { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
+.readout table { font-size: 13px; }
+@media (max-width: 1050px) { .p1top { grid-template-columns: minmax(0, 330px) auto; } .p1top .controls { grid-row: span 2; }
+  .p1btns { grid-column: 2; flex-direction: row; flex-wrap: wrap; align-items: center; } }
 .cbox { position: relative; width: 100%; overflow: hidden; }
 .cbox canvas { position: absolute; left: 0; top: 0; }
 h3 { font-size: 14.5px; font-weight: 600; margin: 0 0 6px; }
@@ -146,13 +158,13 @@ canvas { display: block; }
           <input id="per" type="range" min="0" max="365" step="1">
           <div class="hint">Today: early January.</div>
         </div>
-        <div class="btns">
-          <button id="btnToday" type="button">Set to today</button>
-          <button id="btnSel" type="button">Set to the date in the top bar</button>
-        </div>
+      </div>
+      <div class="readout" id="readout"></div>
+      <div class="p1btns">
+        <button id="btnToday" type="button">Set to today</button>
+        <button id="btnSel" type="button">Set to the date in the top bar</button>
         <label class="check"><input id="exag" type="checkbox" checked> Exaggerate orbit shape ×8 in the diagram</label>
       </div>
-      <dl class="readout" id="readout"></dl>
     </div>
     <div class="p1figs">
       <div class="fig">
@@ -457,15 +469,16 @@ function drawReadout() {
   const ann = S0 / 4 / Math.sqrt(1 - st.e * st.e), ann0 = S0 / 4 / Math.sqrt(1 - TODAY.e * TODAY.e);
   const summer = ((dayOf(180, st.e, st.w) - dayOf(0, st.e, st.w)) % YEAR + YEAR) % YEAR;
   const sgn = (x, n) => (x >= 0 ? "+" : "−") + Math.abs(x).toFixed(n);
-  el("readout").innerHTML = `
-    <dt>65°N, June solstice</dt><dd>${qs.toFixed(0)} W/m²</dd>
-    <dt>&nbsp;&nbsp;change from today</dt><dd>${sgn(qs - q0, 0)} W/m²</dd>
-    <dt>65°N total summer energy</dt><dd>${summerEnergy(st.e, st.w, st.o).toFixed(2)} GJ/m²</dd>
-    <dt>&nbsp;&nbsp;change from today</dt><dd>${sgn(summerEnergy(st.e, st.w, st.o) - summerEnergy(TODAY.e, TODAY.w, TODAY.o), 2)} GJ/m²</dd>
-    <dt>Global yearly average</dt><dd>${ann.toFixed(2)} W/m²</dd>
-    <dt>&nbsp;&nbsp;change from today</dt><dd>${sgn(ann - ann0, 2)} W/m²</dd>
-    <dt>Northern spring + summer</dt><dd>${summer.toFixed(1)} days</dd>
-    <dt>Northern fall + winter</dt><dd>${(YEAR - summer).toFixed(1)} days</dd>`;
+  const summer0 = ((dayOf(180, TODAY.e, TODAY.w) - dayOf(0, TODAY.e, TODAY.w)) % YEAR + YEAR) % YEAR;
+  const se = summerEnergy(st.e, st.w, st.o), se0 = summerEnergy(TODAY.e, TODAY.w, TODAY.o);
+  const row = (n, v, u, d) => `<tr><th>${n}</th><td>${v}</td><td class="u">${u}</td><td>${d}</td></tr>`;
+  el("readout").innerHTML = `<table><thead><tr><th></th><th colspan="2">your settings</th><th>change from today</th></tr></thead><tbody>
+    ${row("65°N, June solstice", qs.toFixed(0), "W/m²", sgn(qs - q0, 0))}
+    ${row("65°N total summer energy", se.toFixed(2), "GJ/m²", sgn(se - se0, 2))}
+    ${row("Global yearly average", ann.toFixed(2), "W/m²", sgn(ann - ann0, 2))}
+    ${row("Northern spring + summer", summer.toFixed(1), "days", sgn(summer - summer0, 1))}
+    ${row("Northern fall + winter", (YEAR - summer).toFixed(1), "days", sgn(summer0 - summer, 1))}
+  </tbody></table>`;
   el("eccV").textContent = st.e.toFixed(4);
   el("oblV").textContent = st.o.toFixed(2) + "°";
   el("perV").textContent = dateStr(periDay(st.e, st.w));
